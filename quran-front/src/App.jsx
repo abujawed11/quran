@@ -6,105 +6,69 @@ import "./App.css";
 const SPECIAL_PAGES = new Set([1, 2]);
 
 export default function App() {
-  const [layout, setLayout]   = useState([]);
-  const [page, setPage]       = useState(3);
-  const [verses, setVerses]   = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError]     = useState("");
+  const [layout,    setLayout]    = useState(null);
+  const [quranData, setQuranData] = useState(null);
+  const [error,     setError]     = useState("");
+  const [page,      setPage]      = useState(3);
 
-  // Load pages_layout.json once
+  // Load both static files once on mount
   useEffect(() => {
-    fetch("/pages_layout.json")
-      .then((r) => {
+    Promise.all([
+      fetch("/pages_layout.json").then((r) => {
         if (!r.ok) throw new Error("Failed to load pages_layout.json");
         return r.json();
+      }),
+      fetch("/quran_text_uthmani.json").then((r) => {
+        if (!r.ok) throw new Error("Failed to load quran_text_uthmani.json");
+        return r.json();
+      }),
+    ])
+      .then(([layoutData, qData]) => {
+        setLayout(layoutData);
+        setQuranData(qData);
       })
-      .then(setLayout)
-      .catch((e) => setError(e.message || "Failed to load layout"));
+      .catch((e) => setError(e.message || "Failed to load data"));
   }, []);
 
+  const loading = !layout || !quranData;
+
+  // Page metadata from layout
   const pageData = useMemo(
-    () => layout.find((p) => p.page === page),
+    () => layout?.find((p) => p.page === page) ?? null,
     [layout, page]
   );
 
-  // Fetch verses for the current page
-  useEffect(() => {
-    const loadVerses = async () => {
-      if (!pageData) return;
-      setLoading(true);
-      setError("");
+  // Extract verses for the current page directly from local JSON
+  const verses = useMemo(() => {
+    if (!quranData || !pageData) return [];
 
-      try {
-        const PER_PAGE = 50;
+    const { start_surah, start_ayah, end_surah, end_ayah } = pageData;
+    const bySurah = quranData.verses_by_surah;
 
-        // Fetch only the API pages that cover [startAyah, endAyah].
-        // Quran API paginates at 50 verses per page.
-        const fetchRange = async (surah, startAyah, endAyah) => {
-          const cap          = Math.min(endAyah, 300); // no surah > 286 verses
-          const firstApiPage = Math.ceil(startAyah / PER_PAGE);
-          const lastApiPage  = Math.ceil(cap       / PER_PAGE);
+    // Returns normalized verse objects compatible with rendering below
+    const extract = (surah, from, to) =>
+      (bySurah[String(surah)] ?? [])
+        .filter((v) => v.ayah >= from && v.ayah <= to)
+        .map((v) => ({
+          id:           v.verse_key,
+          verse_number: v.ayah,
+          text_uthmani: v.text_uthmani,
+        }));
 
-          const requests = [];
-          for (let p = firstApiPage; p <= lastApiPage; p++) {
-            requests.push(
-              fetch(
-                `https://api.quran.com/api/v4/verses/by_chapter/${surah}` +
-                `?fields=text_uthmani&per_page=${PER_PAGE}&page=${p}`
-              )
-                .then((r) => {
-                  if (!r.ok)
-                    throw new Error(`Quran API error: surah ${surah} page ${p}`);
-                  return r.json();
-                })
-                .then((d) => d.verses || [])
-            );
-          }
+    if (start_surah === end_surah) {
+      return extract(start_surah, start_ayah, end_ayah);
+    }
 
-          return (await Promise.all(requests)).flat();
-        };
-
-        let result = [];
-
-        if (pageData.start_surah === pageData.end_surah) {
-          const all = await fetchRange(
-            pageData.start_surah,
-            pageData.start_ayah,
-            pageData.end_ayah
-          );
-          result = all.filter(
-            (v) =>
-              v.verse_number >= pageData.start_ayah &&
-              v.verse_number <= pageData.end_ayah
-          );
-        } else {
-          // Cross-surah page: tail of start_surah + head of end_surah
-          const [startAll, endAll] = await Promise.all([
-            fetchRange(pageData.start_surah, pageData.start_ayah, 300),
-            fetchRange(pageData.end_surah,   1,                    pageData.end_ayah),
-          ]);
-          result = [
-            ...startAll.filter((v) => v.verse_number >= pageData.start_ayah),
-            ...endAll.filter((v)   => v.verse_number <= pageData.end_ayah),
-          ];
-        }
-
-        setVerses(result);
-      } catch (e) {
-        setError(e.message || "Failed to load verses");
-        setVerses([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadVerses();
-  }, [pageData]);
+    // Cross-surah: tail of start_surah + head of end_surah
+    return [
+      ...extract(start_surah, start_ayah, Infinity),
+      ...extract(end_surah,   1,          end_ayah),
+    ];
+  }, [quranData, pageData]);
 
   const isSpecial = SPECIAL_PAGES.has(page);
 
-  // For grid pages (3+): flatten words + ayah-end markers into 15 row buckets.
-  // Each token knows whether it is an ayah marker so it can be styled.
+  // For grid pages (3+): flatten words + ayah-end markers into 15 row buckets
   const gridLines = useMemo(() => {
     if (isSpecial || !verses.length) return [];
 
