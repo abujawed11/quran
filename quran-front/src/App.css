@@ -2,12 +2,14 @@
    App shell
 ───────────────────────────────────────────── */
 .appShell {
+  width: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
   padding: 24px 16px 48px;
   gap: 14px;
   min-height: 100vh;
+  box-sizing: border-box;
 }
 
 /* ─────────────────────────────────────────────
@@ -38,7 +40,7 @@
    Mushaf page base  (shared by both variants)
 ───────────────────────────────────────────── */
 .mushafPage {
-  width: 580px;
+  width: 680px;
   background: #fffef6;
   color: #180e00;
   border-radius: 6px;
@@ -46,6 +48,7 @@
   padding: 44px 50px;
   box-sizing: border-box;
   direction: rtl;
+  overflow: hidden;
 }
 
 /* ─────────────────────────────────────────────
@@ -79,8 +82,9 @@
   justify-content: space-between;
   align-items: center;
   font-family: "Scheherazade New", serif;
-  font-size: 26px;
+  font-size: 23px;
   border-bottom: 1px solid rgba(0, 0, 0, 0.07);
+  overflow: hidden;
 }
 
 .mushafLine:last-child {
