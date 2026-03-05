@@ -2,12 +2,15 @@
 import { useEffect, useMemo, useState } from "react";
 import "./App.css";
 
+// Pages 1–2 are special title/surah pages in IndoPak Hifzi mushaf
+const SPECIAL_PAGES = new Set([1, 2]);
+
 export default function App() {
-  const [layout, setLayout] = useState([]);
-  const [page, setPage] = useState(3);
-  const [verses, setVerses] = useState([]);
+  const [layout, setLayout]   = useState([]);
+  const [page, setPage]       = useState(3);
+  const [verses, setVerses]   = useState([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError]     = useState("");
 
   // Load pages_layout.json once
   useEffect(() => {
@@ -16,7 +19,7 @@ export default function App() {
         if (!r.ok) throw new Error("Failed to load pages_layout.json");
         return r.json();
       })
-      .then((data) => setLayout(data))
+      .then(setLayout)
       .catch((e) => setError(e.message || "Failed to load layout"));
   }, []);
 
@@ -25,22 +28,22 @@ export default function App() {
     [layout, page]
   );
 
-  // Fetch verses for current page
+  // Fetch verses for the current page
   useEffect(() => {
     const loadVerses = async () => {
       if (!pageData) return;
-
       setLoading(true);
       setError("");
 
       try {
-        // Fetch only the API pages that contain our ayah range.
-        // Quran API max per_page is 50, so calculate which pages we need.
         const PER_PAGE = 50;
 
+        // Fetch only the API pages that cover [startAyah, endAyah].
+        // Quran API paginates at 50 verses per page.
         const fetchRange = async (surah, startAyah, endAyah) => {
+          const cap          = Math.min(endAyah, 300); // no surah > 286 verses
           const firstApiPage = Math.ceil(startAyah / PER_PAGE);
-          const lastApiPage  = Math.ceil(endAyah  / PER_PAGE);
+          const lastApiPage  = Math.ceil(cap       / PER_PAGE);
 
           const requests = [];
           for (let p = firstApiPage; p <= lastApiPage; p++) {
@@ -48,15 +51,17 @@ export default function App() {
               fetch(
                 `https://api.quran.com/api/v4/verses/by_chapter/${surah}` +
                 `?fields=text_uthmani&per_page=${PER_PAGE}&page=${p}`
-              ).then((r) => {
-                if (!r.ok) throw new Error(`Quran API failed for surah ${surah} page ${p}`);
-                return r.json();
-              }).then((d) => d.verses || [])
+              )
+                .then((r) => {
+                  if (!r.ok)
+                    throw new Error(`Quran API error: surah ${surah} page ${p}`);
+                  return r.json();
+                })
+                .then((d) => d.verses || [])
             );
           }
 
-          const pages = await Promise.all(requests);
-          return pages.flat();
+          return (await Promise.all(requests)).flat();
         };
 
         let result = [];
@@ -73,12 +78,11 @@ export default function App() {
               v.verse_number <= pageData.end_ayah
           );
         } else {
-          // Cross-surah: fetch tail of start_surah + head of end_surah
+          // Cross-surah page: tail of start_surah + head of end_surah
           const [startAll, endAll] = await Promise.all([
-            fetchRange(pageData.start_surah, pageData.start_ayah, 9999),
+            fetchRange(pageData.start_surah, pageData.start_ayah, 300),
             fetchRange(pageData.end_surah,   1,                    pageData.end_ayah),
           ]);
-
           result = [
             ...startAll.filter((v) => v.verse_number >= pageData.start_ayah),
             ...endAll.filter((v)   => v.verse_number <= pageData.end_ayah),
@@ -97,63 +101,96 @@ export default function App() {
     loadVerses();
   }, [pageData]);
 
-  // Split all verse text into exactly 15 lines by word count
-  const lines = useMemo(() => {
-    const LINES = 15;
-    if (!verses.length) return Array(LINES).fill([]);
+  const isSpecial = SPECIAL_PAGES.has(page);
 
-    const words = [];
+  // For grid pages (3+): flatten words + ayah-end markers into 15 row buckets.
+  // Each token knows whether it is an ayah marker so it can be styled.
+  const gridLines = useMemo(() => {
+    if (isSpecial || !verses.length) return [];
+
+    const ROWS = 15;
+    const tokens = [];
+
     verses.forEach((v) => {
-      v.text_uthmani.split(" ").forEach((w) => words.push(w));
-      words.push(`﴿${v.verse_number}﴾`);
+      v.text_uthmani
+        .split(" ")
+        .forEach((w) => tokens.push({ text: w, marker: false }));
+      tokens.push({ text: `﴿${v.verse_number}﴾`, marker: true });
     });
 
-    const perLine = Math.ceil(words.length / LINES);
-    return Array.from({ length: LINES }, (_, i) =>
-      words.slice(i * perLine, (i + 1) * perLine)
+    const perRow = Math.ceil(tokens.length / ROWS);
+    return Array.from({ length: ROWS }, (_, i) =>
+      tokens.slice(i * perRow, (i + 1) * perRow)
     );
-  }, [verses]);
+  }, [verses, isSpecial]);
 
   const canPrev = page > 1;
   const canNext = page < 610;
 
+  const loadingPlaceholder = <div className="mushafLoading">Loading…</div>;
+
   return (
-    <div style={{ padding: 20 }}>
-      <h1 style={{ marginBottom: 6 }}>Page {page}</h1>
+    <div className="appShell">
 
-      {pageData && (
-        <div style={{ opacity: 0.85 }}>
-          {pageData.start_surah}:{pageData.start_ayah} → {pageData.end_surah}:
-          {pageData.end_ayah}
-        </div>
-      )}
-
-      {error && (
-        <div style={{ marginTop: 10, color: "#ff8080" }}>⚠️ {error}</div>
-      )}
-
-      <div className="mushafPage">
-        {loading ? (
-          <div className="mushafLoading">Loading…</div>
-        ) : (
-          lines.map((lineWords, i) => (
-            <div key={i} className="mushafLine">
-              {lineWords.map((word, j) => (
-                <span key={j}>{word}</span>
-              ))}
-            </div>
-          ))
+      {/* ── Header ── */}
+      <div className="pageHeader">
+        <span className="pageNumber">Page {page}</span>
+        {pageData && (
+          <span className="pageRange">
+            {pageData.start_surah}:{pageData.start_ayah}
+            {" → "}
+            {pageData.end_surah}:{pageData.end_ayah}
+          </span>
         )}
       </div>
 
-      <div style={{ marginTop: 16, display: "flex", gap: 10 }}>
+      {error && <div className="errorMsg">⚠ {error}</div>}
+
+      {/* ── Page 1–2: free-flow ── */}
+      {isSpecial && (
+        <div className="mushafPage mushafFree">
+          {loading ? loadingPlaceholder : (
+            <p className="freeText">
+              {verses.map((v) => (
+                <span key={v.id}>
+                  {v.text_uthmani}
+                  <span className="ayahMarker">﴿{v.verse_number}﴾</span>
+                  {" "}
+                </span>
+              ))}
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* ── Page 3+: 15-row grid ── */}
+      {!isSpecial && (
+        <div className="mushafPage mushafGrid">
+          {loading ? loadingPlaceholder : (
+            gridLines.map((rowTokens, i) => (
+              <div key={i} className="mushafLine">
+                {rowTokens.map((tok, j) =>
+                  tok.marker
+                    ? <span key={j} className="ayahMarker">{tok.text}</span>
+                    : <span key={j}>{tok.text}</span>
+                )}
+              </div>
+            ))
+          )}
+        </div>
+      )}
+
+      {/* ── Navigation ── */}
+      <div className="navBar">
         <button disabled={!canPrev} onClick={() => setPage((p) => p - 1)}>
-          Prev
+          ← Prev
         </button>
+        <span>{page} / 610</span>
         <button disabled={!canNext} onClick={() => setPage((p) => p + 1)}>
-          Next
+          Next →
         </button>
       </div>
+
     </div>
   );
 }
