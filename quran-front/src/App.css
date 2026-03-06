@@ -161,3 +161,112 @@
 .mv-btn-go {
   padding: 8px 14px;
 }
+
+/* ─────────────────────────────────────────────
+   Top-bar right group (debug toggle + page label)
+───────────────────────────────────────────── */
+.mv-topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.mv-debug-toggle {
+  padding: 4px 12px;
+  font-size: 12px;
+  font-family: system-ui, sans-serif;
+  background: transparent;
+  color: #f5e9c8;
+  border: 1px solid rgba(245, 233, 200, 0.35);
+  border-radius: 4px;
+  cursor: pointer;
+  opacity: 0.6;
+  transition: opacity 0.15s, background 0.15s;
+}
+
+.mv-debug-toggle:hover {
+  opacity: 1;
+}
+
+.mv-debug-toggle--on {
+  background: rgba(245, 233, 200, 0.18);
+  border-color: #f5e9c8;
+  opacity: 1;
+}
+
+/* ─────────────────────────────────────────────
+   Debug status bar
+───────────────────────────────────────────── */
+.mv-status-bar {
+  width: 100%;
+  padding: 6px 20px;
+  background: #1a1000;
+  color: #ffe080;
+  font-family: monospace;
+  font-size: 12px;
+  box-sizing: border-box;
+  letter-spacing: 0.02em;
+}
+
+/* ─────────────────────────────────────────────
+   Clicked-word info bar
+───────────────────────────────────────────── */
+.mv-word-info {
+  margin-top: 10px;
+  padding: 7px 18px;
+  background: #3b2a14;
+  color: #f5e9c8;
+  border-radius: 6px;
+  font-family: system-ui, sans-serif;
+  font-size: 13px;
+  letter-spacing: 0.02em;
+}
+
+.mv-word-info strong {
+  color: #ffd680;
+}
+
+/* ─────────────────────────────────────────────
+   Word overlay layer
+───────────────────────────────────────────── */
+.wo-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  /* No pointer-events:none here — boxes use pointer-events:auto and just work */
+}
+
+/* ─────────────────────────────────────────────
+   Ayah line segment
+   One div per LINE per ayah — gives text-selection shape with no overlap.
+   Hover is driven by JS (hoveredAyah state) so all segments of the same
+   ayah highlight together.
+───────────────────────────────────────────── */
+.wo-line {
+  position: absolute;
+  cursor: pointer;
+  pointer-events: auto;
+  border-radius: 3px;
+  transition: background 0.08s;
+}
+
+/* JS hover class — applied to every segment of the hovered ayah */
+.wo-line--hover {
+  background: rgba(255, 200, 0, 0.28);
+  outline: 1.5px solid rgba(180, 130, 0, 0.55);
+}
+
+/* Debug: show all segments even without hover */
+.wo-line--debug {
+  background: rgba(0, 110, 255, 0.10);
+  outline: 1.5px solid rgba(0, 90, 200, 0.50);
+  box-sizing: border-box;
+}
+
+/* Debug + hovered */
+.wo-line--debug.wo-line--hover {
+  background: rgba(255, 200, 0, 0.38);
+  outline: 2px solid rgba(180, 120, 0, 0.85);
+}
