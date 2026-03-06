@@ -1,7 +1,7 @@
 // src/components/MushafViewer.jsx
 import { useState, useRef } from "react";
 
-const TOTAL_PAGES = 604;
+const TOTAL_PAGES = 610;
 
 export default function MushafViewer() {
   const [page, setPage] = useState(1);
