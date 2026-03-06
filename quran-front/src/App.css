@@ -1,203 +1,163 @@
 /* ─────────────────────────────────────────────
-   App shell
+   Shell  (full-page column layout)
 ───────────────────────────────────────────── */
-.appShell {
-  width: 100%;
+.mv-shell {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 24px 16px 48px;
-  gap: 14px;
   min-height: 100vh;
+  background: #e8e0d0;
+  padding-bottom: 40px;
   box-sizing: border-box;
 }
 
 /* ─────────────────────────────────────────────
-   Header
+   Top bar
 ───────────────────────────────────────────── */
-.pageHeader {
+.mv-topbar {
+  width: 100%;
   display: flex;
-  align-items: baseline;
-  gap: 14px;
-}
-
-.pageNumber {
-  font-size: 20px;
-  font-weight: 700;
-}
-
-.pageRange {
-  font-size: 13px;
-  opacity: 0.6;
-}
-
-.errorMsg {
-  color: #ff8080;
-  font-size: 13px;
-}
-
-/* ─────────────────────────────────────────────
-   Mushaf page  (shared base)
-───────────────────────────────────────────── */
-.mushafPage {
-  width: 680px;
-  background: #fffef6;
-  color: #180e00;
-  border-radius: 6px;
-  box-shadow: 0 4px 28px rgba(0, 0, 0, 0.55);
-  padding: 44px 50px;
-  box-sizing: border-box;
-  direction: rtl;
-  overflow: hidden;
-}
-
-/* ─────────────────────────────────────────────
-   Free-flow variant  (pages 1–2)
-───────────────────────────────────────────── */
-.freeText {
-  margin: 0;
-  font-family: "Scheherazade New", serif;
-  font-size: 28px;
-  line-height: 2.6;
-  text-align: justify;
-  text-align-last: center;
-}
-
-/* ─────────────────────────────────────────────
-   15-row grid variant  (pages 3+)
-───────────────────────────────────────────── */
-.mushafGrid {
-  height: 840px;
-  display: grid;
-  grid-template-rows: repeat(15, 1fr);
-}
-
-.mushafLine {
-  display: flex;
-  flex-direction: row;
   justify-content: space-between;
   align-items: center;
-  font-family: "Scheherazade New", serif;
-  font-size: 23px;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.07);
+  padding: 14px 28px;
+  background: #3b2a14;
+  color: #f5e9c8;
+  box-sizing: border-box;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+}
+
+.mv-title {
+  font-family: "Scheherazade New", Georgia, serif;
+  font-size: 22px;
+  letter-spacing: 0.03em;
+}
+
+.mv-page-label {
+  font-size: 13px;
+  opacity: 0.75;
+  font-family: system-ui, sans-serif;
+}
+
+/* ─────────────────────────────────────────────
+   Main content area
+───────────────────────────────────────────── */
+.mv-main {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 32px 16px 16px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* ─────────────────────────────────────────────
+   Page card  (the white shadow-box around the image)
+───────────────────────────────────────────── */
+.mv-page-card {
+  position: relative;          /* Phase 2: overlay anchors here */
+  display: inline-flex;
+  background: #fff;
+  border-radius: 4px;
+  box-shadow:
+    0 2px 6px rgba(0, 0, 0, 0.18),
+    0 10px 40px rgba(0, 0, 0, 0.35);
   overflow: hidden;
-}
-
-.mushafLine:last-child {
-  border-bottom: none;
-}
-
-/* ─────────────────────────────────────────────
-   Ayah end marker   ﴿n﴾
-───────────────────────────────────────────── */
-.ayahMarker {
-  font-family: "Scheherazade New", serif;
-  font-size: 0.8em;
-  color: #7a4f00;
-  margin: 0 1px;
-  flex-shrink: 0;
-  line-height: 1;
+  max-width: min(680px, 92vw);
+  user-select: none;
 }
 
 /* ─────────────────────────────────────────────
-   Structure markers
+   Page image
 ───────────────────────────────────────────── */
-
-/* Juz  ── الجزء N ── */
-.mkJuz {
-  display: inline-flex;
-  align-items: center;
-  font-family: "Scheherazade New", serif;
-  font-size: 0.62em;
-  font-weight: 600;
-  color: #4a2c00;
-  background: #f5e9c8;
-  border: 1px solid #c8a050;
-  border-radius: 3px;
-  padding: 0 5px;
-  margin: 0 4px;
-  white-space: nowrap;
-  flex-shrink: 0;
-  line-height: 1.7;
-}
-
-/* Ruku  ── ع ── */
-.mkRuku {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-family: "Scheherazade New", serif;
-  font-size: 0.72em;
-  color: #1a5c1a;
-  border: 1.5px solid #1a5c1a;
-  border-radius: 50%;
-  width: 1.5em;
-  height: 1.5em;
-  margin: 0 3px;
-  flex-shrink: 0;
-  line-height: 1;
-}
-
-/* Rub el hizb  ── ۞ ── */
-.mkRub {
-  font-family: "Scheherazade New", serif;
-  font-size: 0.88em;
-  color: #8b5e00;
-  margin: 0 2px;
-  flex-shrink: 0;
-}
-
-/* Sajdah  ── ۩ ── */
-.mkSajdah {
-  font-family: "Scheherazade New", serif;
-  font-size: 0.88em;
-  color: #8b1a1a;
-  margin: 0 2px;
-  flex-shrink: 0;
+.mv-page-img {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-width: min(680px, 92vw);
+  object-fit: contain;
 }
 
 /* ─────────────────────────────────────────────
-   Loading placeholder
+   Image error fallback
 ───────────────────────────────────────────── */
-.mushafLoading {
+.mv-img-error {
+  width: min(680px, 92vw);
+  min-height: 400px;
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 100%;
-  min-height: 180px;
-  font-family: sans-serif;
-  font-size: 16px;
-  opacity: 0.45;
-  direction: ltr;
+  font-family: system-ui, sans-serif;
+  font-size: 15px;
+  color: #888;
+  padding: 40px;
+  box-sizing: border-box;
 }
 
 /* ─────────────────────────────────────────────
-   Navigation
+   Navigation bar
 ───────────────────────────────────────────── */
-.navBar {
+.mv-navbar {
   display: flex;
   align-items: center;
-  gap: 18px;
-  font-size: 14px;
-  opacity: 0.85;
+  gap: 16px;
+  padding: 18px 0 0;
 }
 
-.navBar button {
-  padding: 7px 18px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+.mv-btn {
+  padding: 8px 20px;
+  background: #3b2a14;
+  color: #f5e9c8;
+  border: none;
   border-radius: 6px;
-  background: rgba(255, 255, 255, 0.08);
-  color: inherit;
   font-size: 14px;
+  font-family: system-ui, sans-serif;
   cursor: pointer;
-  transition: background 0.15s;
+  transition: background 0.15s, opacity 0.15s;
 }
 
-.navBar button:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.18);
+.mv-btn:hover:not(:disabled) {
+  background: #5a4020;
 }
 
-.navBar button:disabled {
-  opacity: 0.3;
+.mv-btn:disabled {
+  opacity: 0.35;
   cursor: default;
+}
+
+/* ─────────────────────────────────────────────
+   Go-to-page input group
+───────────────────────────────────────────── */
+.mv-goto {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.mv-page-input {
+  width: 64px;
+  padding: 7px 10px;
+  border: 1.5px solid #b09060;
+  border-radius: 6px;
+  background: #fffef6;
+  color: #1a1000;
+  font-size: 14px;
+  font-family: system-ui, sans-serif;
+  text-align: center;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.mv-page-input:focus {
+  border-color: #3b2a14;
+}
+
+/* hide number input spin arrows for cleanliness */
+.mv-page-input::-webkit-inner-spin-button,
+.mv-page-input::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+}
+
+.mv-btn-go {
+  padding: 8px 14px;
 }
