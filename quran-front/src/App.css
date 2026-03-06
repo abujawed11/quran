@@ -37,7 +37,7 @@
 }
 
 /* ─────────────────────────────────────────────
-   Mushaf page base  (shared by both variants)
+   Mushaf page  (shared base)
 ───────────────────────────────────────────── */
 .mushafPage {
   width: 680px;
@@ -54,15 +54,11 @@
 /* ─────────────────────────────────────────────
    Free-flow variant  (pages 1–2)
 ───────────────────────────────────────────── */
-.mushafFree {
-  /* height grows with content */
-}
-
 .freeText {
   margin: 0;
   font-family: "Scheherazade New", serif;
   font-size: 28px;
-  line-height: 2.5;
+  line-height: 2.6;
   text-align: justify;
   text-align-last: center;
 }
@@ -78,7 +74,7 @@
 
 .mushafLine {
   display: flex;
-  flex-direction: row;          /* words spread RTL */
+  flex-direction: row;
   justify-content: space-between;
   align-items: center;
   font-family: "Scheherazade New", serif;
@@ -92,13 +88,71 @@
 }
 
 /* ─────────────────────────────────────────────
-   Ayah end marker  ﴿n﴾
+   Ayah end marker   ﴿n﴾
 ───────────────────────────────────────────── */
 .ayahMarker {
+  font-family: "Scheherazade New", serif;
+  font-size: 0.8em;
   color: #7a4f00;
-  font-size: 0.82em;
-  line-height: 1;
   margin: 0 1px;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+/* ─────────────────────────────────────────────
+   Structure markers
+───────────────────────────────────────────── */
+
+/* Juz  ── الجزء N ── */
+.mkJuz {
+  display: inline-flex;
+  align-items: center;
+  font-family: "Scheherazade New", serif;
+  font-size: 0.62em;
+  font-weight: 600;
+  color: #4a2c00;
+  background: #f5e9c8;
+  border: 1px solid #c8a050;
+  border-radius: 3px;
+  padding: 0 5px;
+  margin: 0 4px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  line-height: 1.7;
+}
+
+/* Ruku  ── ع ── */
+.mkRuku {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "Scheherazade New", serif;
+  font-size: 0.72em;
+  color: #1a5c1a;
+  border: 1.5px solid #1a5c1a;
+  border-radius: 50%;
+  width: 1.5em;
+  height: 1.5em;
+  margin: 0 3px;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+/* Rub el hizb  ── ۞ ── */
+.mkRub {
+  font-family: "Scheherazade New", serif;
+  font-size: 0.88em;
+  color: #8b5e00;
+  margin: 0 2px;
+  flex-shrink: 0;
+}
+
+/* Sajdah  ── ۩ ── */
+.mkSajdah {
+  font-family: "Scheherazade New", serif;
+  font-size: 0.88em;
+  color: #8b1a1a;
+  margin: 0 2px;
   flex-shrink: 0;
 }
 
