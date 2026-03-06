@@ -54,6 +54,28 @@ export default function WordOverlay({ page, debug, onAyahClick, onStatus }) {
     return { minX, minY, w: maxX - minX, h: maxY - minY };
   }, [coords]);
 
+  // ── Adaptive scale ────────────────────────────────────────────────────────
+  // Normal pages (3+): image dimensions ≈ coord span → use independent scaleX/scaleY.
+  //
+  // Pages 1–2 (and any page whose image is proportionally TALLER than its
+  // coord span): the image contains a surah-title header above the text area
+  // that has no corresponding coords. Symptom: scaleY >> scaleX.
+  //
+  // Fix: use the X-axis scale uniformly for both axes, then push boxes down
+  // by the leftover height (= the header's pixel height in the displayed image).
+  const scaleInfo = useMemo(() => {
+    if (!pageBBox || !displaySize?.w) return null;
+    const sX = displaySize.w / pageBBox.w;
+    const sY = displaySize.h / pageBBox.h;
+    if (sY > sX) {
+      // Image has header above text — uniform scale + top offset
+      const contentH = pageBBox.h * sX;
+      return { scaleX: sX, scaleY: sX, yOffset: displaySize.h - contentH };
+    }
+    // Normal case — independent scales, no vertical offset
+    return { scaleX: sX, scaleY: sY, yOffset: 0 };
+  }, [pageBBox, displaySize]);
+
   // ── Build per-LINE segments per ayah ─────────────────────────────────────
   //
   // Each entry in ayahLines:
@@ -99,17 +121,17 @@ export default function WordOverlay({ page, debug, onAyahClick, onStatus }) {
       ayahCount,
       displayW: displaySize?.w,
       displayH: displaySize?.h,
+      yOffset:  scaleInfo?.yOffset ?? 0,
     });
-  }, [coords, ayahLines, displaySize, onStatus]);
+  }, [coords, ayahLines, displaySize, scaleInfo, onStatus]);
 
-  const canRender = !!(coords && displaySize?.w && pageBBox);
-  const scaleX    = canRender ? displaySize.w / pageBBox.w : 1;
-  const scaleY    = canRender ? displaySize.h / pageBBox.h : 1;
+  const canRender = !!(coords && displaySize?.w && pageBBox && scaleInfo);
 
   return (
     <div className="wo-layer" ref={layerRef}>
       {canRender && ayahLines.map(({ surah, ayah, ayahKey, lineKey, minX, maxX, y, h }) => {
         const isHovered = hoveredAyah === ayahKey;
+        const { scaleX, scaleY, yOffset } = scaleInfo;
         return (
           <div
             key={lineKey}
@@ -120,7 +142,7 @@ export default function WordOverlay({ page, debug, onAyahClick, onStatus }) {
             ].join(" ").trim()}
             style={{
               left:   (minX - pageBBox.minX) * scaleX,
-              top:    (y    - pageBBox.minY) * scaleY,
+              top:    (y    - pageBBox.minY) * scaleY + yOffset,
               width:  (maxX - minX)          * scaleX,
               height: h                      * scaleY,
             }}

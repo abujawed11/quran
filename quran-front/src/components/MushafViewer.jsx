@@ -45,6 +45,7 @@ export default function MushafViewer() {
     return [
       coordsLoaded ? `Coords ✓  (${wordCount} words, ${ayahCount} ayahs)` : "Coords ✗",
       displayW     ? `Layer ✓  (${Math.round(displayW)}×${Math.round(displayH)} px)` : "Layer ✗",
+      overlayStatus.yOffset > 0 ? `Header offset: ${Math.round(overlayStatus.yOffset)} px` : "No header offset",
     ].join("   |   ");
   })();
 
