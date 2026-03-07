@@ -13,8 +13,10 @@ const RECITERS = [
 const TOTAL_PAGES = 610;
 
 // ── Pure helpers (no closures, safe to call from event handlers) ──────────────
-const audioUrl = (reciter, surah, ayah) =>
-  `/audio/${reciter}/${String(surah).padStart(3,"0")}${String(ayah).padStart(3,"0")}.mp3`;
+const audioUrl = (reciter, surah, ayah) => {
+  const file = `${String(surah).padStart(3,"0")}${String(ayah).padStart(3,"0")}`;
+  return `/api/audio?r=${encodeURIComponent(reciter)}&f=${file}`;
+};
 
 const displayAyahNum = (surah, ayah) => (surah === 1 ? ayah - 1 : ayah);
 
