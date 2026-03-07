@@ -4,8 +4,9 @@ import WordOverlay from "./WordOverlay";
 import Sidebar from "./Sidebar";
 
 const RECITERS = [
-  { id: "Alafasy_128kbps",           label: "Mishary Alafasy" },
-  { id: "AbdullaahJuhaynee_128kbps", label: "Abdullaah Al-Juhaynee" },
+  { id: "Alafasy_128kbps",                label: "Mishary Alafasy" },
+  { id: "AbdullaahJuhaynee_128kbps",      label: "Abdullaah Al-Juhaynee" },
+  { id: "Abdurrahmaan_As-Sudais_192kbps", label: "Abdurrahmaan As-Sudais" },
 ];
 
 const TOTAL_PAGES = 610;
