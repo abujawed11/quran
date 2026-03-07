@@ -171,6 +171,27 @@
   gap: 14px;
 }
 
+.mv-reciter-select {
+  padding: 4px 10px;
+  font-size: 13px;
+  font-family: system-ui, sans-serif;
+  background: rgba(255, 255, 255, 0.08);
+  color: #f5e9c8;
+  border: 1px solid rgba(245, 233, 200, 0.35);
+  border-radius: 6px;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.mv-reciter-select:hover,
+.mv-reciter-select:focus {
+  border-color: rgba(245, 233, 200, 0.8);
+}
+.mv-reciter-select option {
+  background: #1a1a2e;
+  color: #f5e9c8;
+}
+
 .mv-debug-toggle {
   padding: 4px 12px;
   font-size: 12px;

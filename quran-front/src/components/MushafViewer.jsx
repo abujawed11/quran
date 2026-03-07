@@ -2,11 +2,15 @@
 import { useState, useRef, useCallback } from "react";
 import WordOverlay from "./WordOverlay";
 
-const AUDIO_BASE = "/audio/Alafasy_128kbps";
+const RECITERS = [
+  { id: "Alafasy_128kbps",       label: "Mishary Alafasy" },
+  { id: "AbdullaahJuhaynee_128kbps", label: "Abdullaah Al-Juhaynee" },
+];
 
 const TOTAL_PAGES = 610;
 
 export default function MushafViewer() {
+  const [reciter, setReciter]         = useState(RECITERS[0].id);
   const [page, setPage]               = useState(1);
   const [inputVal, setInputVal]       = useState("1");
   const [imgError, setImgError]       = useState(false);
@@ -42,7 +46,7 @@ export default function MushafViewer() {
     const file = `${String(surah).padStart(3, "0")}${String(ayah).padStart(3, "0")}.mp3`;
     const audio = audioRef.current;
     audio.pause();
-    audio.src = `${AUDIO_BASE}/${file}`;
+    audio.src = `/audio/${reciter}/${file}`;
     audio.play().catch((err) => console.warn("[Audio] play failed:", err.message));
   };
   const handleStatus = useCallback((s) => setOverlayStatus(s), []);
@@ -68,6 +72,18 @@ export default function MushafViewer() {
       <header className="mv-topbar">
         <span className="mv-title">المصحف الشريف</span>
         <div className="mv-topbar-right">
+          <select
+            className="mv-reciter-select"
+            value={reciter}
+            onChange={(e) => {
+              setReciter(e.target.value);
+              if (audioRef.current) audioRef.current.pause();
+            }}
+          >
+            {RECITERS.map((r) => (
+              <option key={r.id} value={r.id}>{r.label}</option>
+            ))}
+          </select>
           <button
             className={`mv-debug-toggle${debugMode ? " mv-debug-toggle--on" : ""}`}
             onClick={() => setDebugMode((d) => !d)}
