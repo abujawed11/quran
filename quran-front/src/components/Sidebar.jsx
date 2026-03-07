@@ -1,18 +1,15 @@
 // src/components/Sidebar.jsx
 import { useState, useEffect, useMemo } from "react";
 import { SURAHS, JUZS, getPageMeta } from "../data/quranMeta";
+import AudioPlayer from "./AudioPlayer";
 
 export default function Sidebar({
-  page,
-  totalPages,
-  reciter,
-  reciters,
-  clickedAyah,
-  debugMode,
-  overlayStatus,
-  onPageChange,
-  onReciterChange,
-  onDebugToggle,
+  page, totalPages, reciter, reciters, clickedAyah,
+  debugMode, overlayStatus,
+  onPageChange, onReciterChange, onDebugToggle,
+  // Audio player
+  playingAyah, isPlaying, autoAdvance, currentTime, duration,
+  onPlay, onPause, onStop, onNext, onPrev, onToggleAutoAdvance, onSeek,
 }) {
   const [pageInput, setPageInput] = useState(String(page));
 
@@ -140,6 +137,26 @@ export default function Sidebar({
           </button>
         </div>
       </div>
+
+      {/* ── Audio Player ── */}
+      {playingAyah && (
+        <div className="sb-section sb-section--player">
+          <AudioPlayer
+            playingAyah={playingAyah}
+            isPlaying={isPlaying}
+            autoAdvance={autoAdvance}
+            currentTime={currentTime}
+            duration={duration}
+            onPlay={onPlay}
+            onPause={onPause}
+            onStop={onStop}
+            onNext={onNext}
+            onPrev={onPrev}
+            onToggleAutoAdvance={onToggleAutoAdvance}
+            onSeek={onSeek}
+          />
+        </div>
+      )}
 
       {/* ── Reciter ── */}
       <div className="sb-section">

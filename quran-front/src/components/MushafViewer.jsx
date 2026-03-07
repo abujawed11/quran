@@ -1,72 +1,263 @@
 // src/components/MushafViewer.jsx
 import { useState, useRef, useCallback, useEffect } from "react";
-import WordOverlay from "./WordOverlay";
-import Sidebar from "./Sidebar";
+import { SURAHS } from "../data/quranMeta";
+import WordOverlay      from "./WordOverlay";
+import Sidebar          from "./Sidebar";
+import AyahContextMenu  from "./AyahContextMenu";
 
 const RECITERS = [
   { id: "Alafasy_128kbps",                label: "Mishary Alafasy" },
   { id: "AbdullaahJuhaynee_128kbps",      label: "Abdullaah Al-Juhaynee" },
   { id: "Abdurrahmaan_As-Sudais_192kbps", label: "Abdurrahmaan As-Sudais" },
 ];
-
 const TOTAL_PAGES = 610;
 
+// ── Pure helpers (no closures, safe to call from event handlers) ──────────────
+const audioUrl = (reciter, surah, ayah) =>
+  `/audio/${reciter}/${String(surah).padStart(3,"0")}${String(ayah).padStart(3,"0")}.mp3`;
+
+const displayAyahNum = (surah, ayah) => (surah === 1 ? ayah - 1 : ayah);
+
+const nextAyah = (surah, ayah) => {
+  const max = SURAHS[surah]?.ayahs;
+  if (!max) return null;
+  if (ayah < max) return { surah, ayah: ayah + 1 };
+  if (surah < 114) return { surah: surah + 1, ayah: 1 };
+  return null;
+};
+
+const prevAyah = (surah, ayah) => {
+  if (ayah > 1) return { surah, ayah: ayah - 1 };
+  if (surah > 1) {
+    const s = surah - 1;
+    return { surah: s, ayah: SURAHS[s]?.ayahs ?? 1 };
+  }
+  return null;
+};
+
+// ── Component ─────────────────────────────────────────────────────────────────
 export default function MushafViewer() {
-  const [page, setPage]               = useState(1);
-  const [reciter, setReciter]         = useState(RECITERS[0].id);
-  const [imgError, setImgError]       = useState(false);
-  const [clickedAyah, setClickedAyah] = useState(null);
-  const [debugMode, setDebugMode]     = useState(false);
+  // ── UI state ──────────────────────────────────────────────────────────────
+  const [page,          setPage]          = useState(1);
+  const [reciter,       setReciter]       = useState(RECITERS[0].id);
+  const [imgError,      setImgError]      = useState(false);
+  const [clickedAyah,   setClickedAyah]   = useState(null);
+  const [debugMode,     setDebugMode]     = useState(false);
   const [overlayStatus, setOverlayStatus] = useState(null);
+  const [contextMenu,   setContextMenu]   = useState(null); // { x, y, surah, ayah, displayAyah }
 
-  const audioRef = useRef(null);
+  // ── Audio state ───────────────────────────────────────────────────────────
+  const [playingAyah,  setPlayingAyah]  = useState(null); // { surah, ayah, displayAyah }
+  const [isPlaying,    setIsPlaying]    = useState(false);
+  const [autoAdvance,  setAutoAdvance]  = useState(true);
+  const [currentTime,  setCurrentTime]  = useState(0);
+  const [duration,     setDuration]     = useState(0);
 
-  // Resume the browser's media pipeline when returning to the tab after idle.
-  // Browsers can throttle/suspend audio after long inactivity — this wakes it up
-  // before the user clicks, so the beginning of the ayah isn't cut off.
+  // ── Refs (for use inside event handlers to avoid stale closures) ──────────
+  const audioRef       = useRef(null); // main player
+  const preloadRef     = useRef(null); // silent preload buffer
+  const playingRef     = useRef(null); // mirrors playingAyah
+  const autoAdvRef     = useRef(true); // mirrors autoAdvance
+  const playModeRef    = useRef("single"); // "single" | "continuous"
+  const reciterRef     = useRef(RECITERS[0].id); // mirrors reciter
+  const pageRef        = useRef(1);    // mirrors page
+  const ayahKeysRef    = useRef(new Set()); // ayah keys on current page
+
+  // ── Sync refs with state ──────────────────────────────────────────────────
+  useEffect(() => { reciterRef.current  = reciter;     }, [reciter]);
+  useEffect(() => { autoAdvRef.current  = autoAdvance; }, [autoAdvance]);
+  useEffect(() => { pageRef.current     = page;        }, [page]);
+
+  // ── Wake media pipeline when returning to tab after idle ──────────────────
   useEffect(() => {
-    const handleVisibility = () => {
-      if (document.visibilityState === "visible") {
-        const audio = audioRef.current;
-        if (!audio || !audio.paused) return;
-        // Silent play+pause wakes the media pipeline without audible output
-        audio.volume = 0;
-        audio.play().then(() => {
-          audio.pause();
-          audio.volume = 1;
-        }).catch(() => {
-          audio.volume = 1;
-        });
-      }
+    const handle = () => {
+      if (document.visibilityState !== "visible") return;
+      const a = audioRef.current;
+      if (!a || !a.paused) return;
+      a.volume = 0;
+      a.play().then(() => { a.pause(); a.volume = 1; }).catch(() => { a.volume = 1; });
     };
-    document.addEventListener("visibilitychange", handleVisibility);
-    return () => document.removeEventListener("visibilitychange", handleVisibility);
+    document.addEventListener("visibilitychange", handle);
+    return () => document.removeEventListener("visibilitychange", handle);
   }, []);
 
+  // ── Audio event listeners ─────────────────────────────────────────────────
+  useEffect(() => {
+    const audio = audioRef.current;
+
+    const onEnded = () => {
+      const cur  = playingRef.current;
+      const mode = playModeRef.current;
+
+      if (!cur || mode === "single" || !autoAdvRef.current) {
+        setIsPlaying(false);
+        return;
+      }
+
+      const next = nextAyah(cur.surah, cur.ayah);
+      if (!next) {
+        // Reached end of Quran
+        setPlayingAyah(null);
+        playingRef.current = null;
+        setIsPlaying(false);
+        return;
+      }
+
+      const dAyah = displayAyahNum(next.surah, next.ayah);
+      const np    = { surah: next.surah, ayah: next.ayah, displayAyah: dAyah };
+      setPlayingAyah(np);
+      playingRef.current = np;
+
+      // Auto-navigate if this ayah is not on the current page
+      const key = `${next.surah}:${next.ayah}`;
+      if (!ayahKeysRef.current.has(key)) {
+        const surahPage = SURAHS[next.surah]?.page ?? 0;
+        const curr      = pageRef.current;
+        const target    = surahPage > curr ? surahPage : curr + 1;
+        const clamped   = Math.max(1, Math.min(TOTAL_PAGES, target));
+        pageRef.current = clamped;
+        setPage(clamped);
+        setImgError(false);
+        setOverlayStatus(null);
+      }
+
+      // Play next
+      audio.src = audioUrl(reciterRef.current, next.surah, next.ayah);
+      audio.load();
+      audio.play().catch((e) => console.warn("[Audio]", e.message));
+
+      // Preload the one after
+      const after = nextAyah(next.surah, next.ayah);
+      if (after && preloadRef.current) {
+        preloadRef.current.src = audioUrl(reciterRef.current, after.surah, after.ayah);
+        preloadRef.current.load();
+      }
+    };
+
+    const onTimeUpdate      = () => setCurrentTime(audio.currentTime);
+    const onDurationChange  = () => { if (isFinite(audio.duration)) setDuration(audio.duration); };
+    const onPlay            = () => setIsPlaying(true);
+    const onPause           = () => setIsPlaying(false);
+
+    audio.addEventListener("ended",          onEnded);
+    audio.addEventListener("timeupdate",     onTimeUpdate);
+    audio.addEventListener("durationchange", onDurationChange);
+    audio.addEventListener("play",           onPlay);
+    audio.addEventListener("pause",          onPause);
+    return () => {
+      audio.removeEventListener("ended",          onEnded);
+      audio.removeEventListener("timeupdate",     onTimeUpdate);
+      audio.removeEventListener("durationchange", onDurationChange);
+      audio.removeEventListener("play",           onPlay);
+      audio.removeEventListener("pause",          onPause);
+    };
+  }, []); // empty deps — uses refs only
+
+  // ── Core play function ────────────────────────────────────────────────────
+  const playAyah = useCallback((surah, ayah, dAyah, mode = "single") => {
+    const np = { surah, ayah, displayAyah: dAyah };
+    setPlayingAyah(np);
+    playingRef.current  = np;
+    playModeRef.current = mode;
+    setCurrentTime(0);
+    setDuration(0);
+
+    const audio = audioRef.current;
+    audio.pause();
+    audio.src = audioUrl(reciterRef.current, surah, ayah);
+    audio.load();
+    audio.play().catch((e) => console.warn("[Audio]", e.message));
+
+    // Preload next
+    const next = nextAyah(surah, ayah);
+    if (next && preloadRef.current) {
+      preloadRef.current.src = audioUrl(reciterRef.current, next.surah, next.ayah);
+      preloadRef.current.load();
+    }
+  }, []);
+
+  // ── Navigation ────────────────────────────────────────────────────────────
   const goToPage = (n) => {
     const clamped = Math.max(1, Math.min(TOTAL_PAGES, n));
+    pageRef.current = clamped;
     setPage(clamped);
     setImgError(false);
     setClickedAyah(null);
     setOverlayStatus(null);
   };
 
+  // ── Reciter ───────────────────────────────────────────────────────────────
   const handleReciterChange = (id) => {
+    reciterRef.current = id; // update immediately for event handlers
     setReciter(id);
-    if (audioRef.current) audioRef.current.pause();
+    audioRef.current?.pause();
   };
 
-  const handleAyahClick = (surah, ayah, displayAyah) => {
-    setClickedAyah({ surah, ayah, displayAyah });
-    const file = `${String(surah).padStart(3, "0")}${String(ayah).padStart(3, "0")}.mp3`;
+  // ── Ayah interactions ─────────────────────────────────────────────────────
+  const handleAyahClick = (surah, ayah, dAyah) => {
+    setClickedAyah({ surah, ayah, displayAyah: dAyah });
+    playAyah(surah, ayah, dAyah, "single");
+  };
+
+  const handleAyahRightClick = (surah, ayah, dAyah, x, y) => {
+    setContextMenu({ x, y, surah, ayah, displayAyah: dAyah });
+  };
+
+  // ── Player controls ───────────────────────────────────────────────────────
+  const handlePlay = () => {
+    if (playingRef.current) audioRef.current?.play().catch(() => {});
+  };
+
+  const handlePause = () => audioRef.current?.pause();
+
+  const handleStop = () => {
     const audio = audioRef.current;
-    audio.pause();
-    audio.src = `/audio/${reciter}/${file}`;
-    audio.load(); // explicitly buffer before play so beginning isn't cut off
-    audio.play().catch((err) => console.warn("[Audio] play failed:", err.message));
+    if (audio) { audio.pause(); audio.src = ""; }
+    setPlayingAyah(null);
+    playingRef.current = null;
+    setIsPlaying(false);
+    setCurrentTime(0);
+    setDuration(0);
   };
 
-  const handleStatus = useCallback((s) => setOverlayStatus(s), []);
+  const handleNext = () => {
+    const cur = playingRef.current;
+    if (!cur) return;
+    const next = nextAyah(cur.surah, cur.ayah);
+    if (!next) return;
+    playAyah(next.surah, next.ayah, displayAyahNum(next.surah, next.ayah), playModeRef.current);
+  };
+
+  const handlePrev = () => {
+    const cur = playingRef.current;
+    if (!cur) return;
+    // If > 3s into ayah, restart it; otherwise go to previous
+    if (audioRef.current && audioRef.current.currentTime > 3) {
+      audioRef.current.currentTime = 0;
+      return;
+    }
+    const prev = prevAyah(cur.surah, cur.ayah);
+    if (!prev) return;
+    playAyah(prev.surah, prev.ayah, displayAyahNum(prev.surah, prev.ayah), playModeRef.current);
+  };
+
+  const handleSeek  = (t) => { if (audioRef.current) audioRef.current.currentTime = t; };
+
+  const handleToggleAutoAdvance = () => {
+    setAutoAdvance((v) => {
+      autoAdvRef.current = !v;
+      return !v;
+    });
+  };
+
+  // ── Status from overlay ───────────────────────────────────────────────────
+  const handleStatus = useCallback((s) => {
+    setOverlayStatus(s);
+    if (s?.ayahKeys) ayahKeysRef.current = s.ayahKeys;
+  }, []);
+
+  // ── Derived ───────────────────────────────────────────────────────────────
+  const playingAyahKey = playingAyah ? `${playingAyah.surah}:${playingAyah.ayah}` : null;
 
   return (
     <div className="mv-shell">
@@ -82,11 +273,23 @@ export default function MushafViewer() {
         onPageChange={goToPage}
         onReciterChange={handleReciterChange}
         onDebugToggle={() => setDebugMode((d) => !d)}
+        // Audio player props
+        playingAyah={playingAyah}
+        isPlaying={isPlaying}
+        autoAdvance={autoAdvance}
+        currentTime={currentTime}
+        duration={duration}
+        onPlay={handlePlay}
+        onPause={handlePause}
+        onStop={handleStop}
+        onNext={handleNext}
+        onPrev={handlePrev}
+        onToggleAutoAdvance={handleToggleAutoAdvance}
+        onSeek={handleSeek}
       />
 
       <main className="mv-page-panel">
         <div className="mv-page-frame">
-          {/* Corner ornaments */}
           <span className="mv-corner mv-corner--tl" />
           <span className="mv-corner mv-corner--tr" />
           <span className="mv-corner mv-corner--bl" />
@@ -108,7 +311,9 @@ export default function MushafViewer() {
                 <WordOverlay
                   page={page}
                   debug={debugMode}
+                  playingAyahKey={playingAyahKey}
                   onAyahClick={handleAyahClick}
+                  onAyahRightClick={handleAyahRightClick}
                   onStatus={handleStatus}
                 />
               </>
@@ -117,7 +322,17 @@ export default function MushafViewer() {
         </div>
       </main>
 
-      <audio ref={audioRef} />
+      {/* Right-click context menu */}
+      <AyahContextMenu
+        menu={contextMenu}
+        onPlaySingle={(s, a, d) => { setClickedAyah({ surah: s, ayah: a, displayAyah: d }); playAyah(s, a, d, "single"); }}
+        onPlayFrom={(s, a, d)   => { setClickedAyah({ surah: s, ayah: a, displayAyah: d }); playAyah(s, a, d, "continuous"); }}
+        onClose={() => setContextMenu(null)}
+      />
+
+      {/* Hidden audio elements */}
+      <audio ref={audioRef}   />
+      <audio ref={preloadRef} />
 
     </div>
   );
