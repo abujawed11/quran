@@ -100,12 +100,12 @@ export default function MushafViewer() {
       )}
 
       {/* ── Clicked ayah display ── */}
-      {clickedAyah && (
+      {/* {clickedAyah && (
         <div className="mv-word-info">
           Selected → Surah <strong>{clickedAyah.surah}</strong> · Ayah{" "}
           <strong>{clickedAyah.displayAyah ?? clickedAyah.ayah}</strong>
         </div>
-      )}
+      )} */}
 
       {/* ── Page image card ── */}
       <main className="mv-main">
