@@ -68,21 +68,38 @@ export default function WordOverlay({ page, debug, onAyahClick, onStatus }) {
     const sX = displaySize.w / pageBBox.w;
     const sY = displaySize.h / pageBBox.h;
     if (sY > sX) {
-      // Image has header above text — uniform scale + top offset
+      // Image has a surah-title header above the text area (no coords for header).
+      // Use uniform X-scale for both axes + push boxes down by the header height.
       const contentH = pageBBox.h * sX;
-      return { scaleX: sX, scaleY: sX, yOffset: displaySize.h - contentH };
+      let yOffset = displaySize.h - contentH;
+
+      // Page 1 special case: Surah Al-Fatiha's Bismillah (ayah 1:1) is rendered
+      // in a large decorative font in the image — much taller than h=61 in the
+      // coord data. This shifts every subsequent line downward in the image.
+      // Add an empirical correction to compensate for the extra Bismillah height.
+      if (page === 1) yOffset += displaySize.h * 0.06;
+
+      return { scaleX: sX, scaleY: sX, yOffset };
     }
     // Normal case — independent scales, no vertical offset
     return { scaleX: sX, scaleY: sY, yOffset: 0 };
-  }, [pageBBox, displaySize]);
+  }, [pageBBox, displaySize, page]);
 
   // ── Build per-LINE segments per ayah ─────────────────────────────────────
   //
   // Each entry in ayahLines:
-  //   { surah, ayah, ayahKey, lineKey, minX, maxX, y, h }
+  //   { surah, ayah, ayahKey, lineKey, minX, maxX, y, h, displayAyah }
   //
   // Words on the same line share the same y value, so grouping by y gives
   // the exact horizontal span of that ayah on that line.
+  //
+  // Numbering note — Surah 1 (Al-Fatiha):
+  //   The coord JSON uses the digital standard: Bismillah = 1:1, Alhamdulillah = 1:2.
+  //   The Hafizi Mushaf treats Bismillah as a decorative header (not a numbered ayah),
+  //   so visually Alhamdulillah = Ayah 1.
+  //   Fix: skip rendering a box for 1:1 (it's shown as a header image, not clickable text),
+  //   and display 1:2 as "Ayah 1", 1:3 as "Ayah 2", etc. (displayAyah = ayah - 1).
+  //   The internal ayah number (1:2, 1:3…) is kept unchanged for audio compatibility.
   const ayahLines = useMemo(() => {
     if (!coords) return [];
 
@@ -90,6 +107,9 @@ export default function WordOverlay({ page, debug, onAyahClick, onStatus }) {
     const ayahLineMap = {};
     Object.entries(coords).forEach(([key, box]) => {
       const [s, a] = key.split(":");
+      // Skip Bismillah of Al-Fatiha — it's a decorative header in the Hafizi mushaf,
+      // not a numbered ayah. It has no clickable overlay.
+      if (s === "1" && a === "1") return;
       const ayahKey = `${s}:${a}`;
       if (!ayahLineMap[ayahKey]) ayahLineMap[ayahKey] = { surah: +s, ayah: +a, lines: {} };
       const lines = ayahLineMap[ayahKey].lines;
@@ -100,12 +120,14 @@ export default function WordOverlay({ page, debug, onAyahClick, onStatus }) {
     // Step 2: flatten into one entry per line-segment
     const result = [];
     Object.entries(ayahLineMap).forEach(([ayahKey, { surah, ayah, lines }]) => {
+      // For Surah 1: coord ayah 2 = mushaf ayah 1, ayah 3 = mushaf ayah 2, etc.
+      const displayAyah = surah === 1 ? ayah - 1 : ayah;
       Object.entries(lines).forEach(([yStr, boxes]) => {
         const y    = +yStr;
         const minX = Math.min(...boxes.map((b) => b.x));
         const maxX = Math.max(...boxes.map((b) => b.x + b.w));
         const h    = Math.max(...boxes.map((b) => b.h));
-        result.push({ surah, ayah, ayahKey, lineKey: `${ayahKey}:${y}`, minX, maxX, y, h });
+        result.push({ surah, ayah, displayAyah, ayahKey, lineKey: `${ayahKey}:${y}`, minX, maxX, y, h });
       });
     });
 
@@ -129,7 +151,7 @@ export default function WordOverlay({ page, debug, onAyahClick, onStatus }) {
 
   return (
     <div className="wo-layer" ref={layerRef}>
-      {canRender && ayahLines.map(({ surah, ayah, ayahKey, lineKey, minX, maxX, y, h }) => {
+      {canRender && ayahLines.map(({ surah, ayah, displayAyah, ayahKey, lineKey, minX, maxX, y, h }) => {
         const isHovered = hoveredAyah === ayahKey;
         const { scaleX, scaleY, yOffset } = scaleInfo;
         return (
@@ -146,24 +168,10 @@ export default function WordOverlay({ page, debug, onAyahClick, onStatus }) {
               width:  (maxX - minX)          * scaleX,
               height: h                      * scaleY,
             }}
-            title={debug ? `${surah}:${ayah}` : undefined}
+            title={debug ? `${surah}:${displayAyah}` : undefined}
             onMouseEnter={() => setHoveredAyah(ayahKey)}
             onMouseLeave={() => setHoveredAyah(null)}
-            onClick={() => {
-              console.log("Ayah clicked →", { surah, ayah });
-              onAyahClick(surah, ayah);
-
-              // ── PHASE 3: trigger audio here ──────────────────────────────
-              // surah and ayah are ready. Build the URL and play:
-              //
-              //   const url =
-              //     `https://everyayah.com/data/Husary_128kbps/` +
-              //     `${String(surah).padStart(3,'0')}${String(ayah).padStart(3,'0')}.mp3`;
-              //   audioRef.current.pause();
-              //   audioRef.current.src = url;
-              //   audioRef.current.play();
-              // ─────────────────────────────────────────────────────────────
-            }}
+            onClick={() => onAyahClick(surah, ayah, displayAyah)}
           />
         );
       })}

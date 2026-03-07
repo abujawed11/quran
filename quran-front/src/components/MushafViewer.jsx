@@ -2,6 +2,8 @@
 import { useState, useRef, useCallback } from "react";
 import WordOverlay from "./WordOverlay";
 
+const AUDIO_BASE = "/audio/Alafasy_128kbps";
+
 const TOTAL_PAGES = 610;
 
 export default function MushafViewer() {
@@ -13,6 +15,7 @@ export default function MushafViewer() {
   const [overlayStatus, setOverlayStatus] = useState(null);
 
   const inputRef = useRef(null);
+  const audioRef = useRef(null);
 
   const goToPage = (n) => {
     const clamped = Math.max(1, Math.min(TOTAL_PAGES, n));
@@ -32,8 +35,17 @@ export default function MushafViewer() {
     if (e.key === "Enter") handleGoClick();
   };
 
-  const handleAyahClick = (surah, ayah) => setClickedAyah({ surah, ayah });
-  const handleStatus    = useCallback((s) => setOverlayStatus(s), []);
+  // displayAyah = mushaf-visible number (Bismillah skipped for surah 1)
+  // ayah        = internal coord number (used for audio)
+  const handleAyahClick = (surah, ayah, displayAyah) => {
+    setClickedAyah({ surah, ayah, displayAyah });
+    const file = `${String(surah).padStart(3, "0")}${String(ayah).padStart(3, "0")}.mp3`;
+    const audio = audioRef.current;
+    audio.pause();
+    audio.src = `${AUDIO_BASE}/${file}`;
+    audio.play().catch((err) => console.warn("[Audio] play failed:", err.message));
+  };
+  const handleStatus = useCallback((s) => setOverlayStatus(s), []);
 
   const canPrev  = page > 1;
   const canNext  = page < TOTAL_PAGES;
@@ -75,8 +87,7 @@ export default function MushafViewer() {
       {clickedAyah && (
         <div className="mv-word-info">
           Selected → Surah <strong>{clickedAyah.surah}</strong> · Ayah{" "}
-          <strong>{clickedAyah.ayah}</strong>
-          {/* PHASE 3: use clickedAyah.surah + clickedAyah.ayah to build audio URL and play */}
+          <strong>{clickedAyah.displayAyah ?? clickedAyah.ayah}</strong>
         </div>
       )}
 
@@ -128,6 +139,9 @@ export default function MushafViewer() {
           Next &rarr;
         </button>
       </nav>
+
+      {/* Hidden audio player */}
+      <audio ref={audioRef} />
 
     </div>
   );
