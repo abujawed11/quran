@@ -61,27 +61,35 @@ export default function MushafViewer() {
       />
 
       <main className="mv-page-panel">
-        <div className="mv-page-card">
-          {imgError ? (
-            <div className="mv-img-error">Image not found for page {page}</div>
-          ) : (
-            <>
-              <img
-                key={page}
-                src={`/mushaf/pages/${page}.png`}
-                alt={`Quran page ${page}`}
-                className="mv-page-img"
-                onError={() => setImgError(true)}
-                draggable={false}
-              />
-              <WordOverlay
-                page={page}
-                debug={debugMode}
-                onAyahClick={handleAyahClick}
-                onStatus={handleStatus}
-              />
-            </>
-          )}
+        <div className="mv-page-frame">
+          {/* Corner ornaments */}
+          <span className="mv-corner mv-corner--tl" />
+          <span className="mv-corner mv-corner--tr" />
+          <span className="mv-corner mv-corner--bl" />
+          <span className="mv-corner mv-corner--br" />
+
+          <div className="mv-page-card">
+            {imgError ? (
+              <div className="mv-img-error">Image not found for page {page}</div>
+            ) : (
+              <>
+                <img
+                  key={page}
+                  src={`/mushaf/pages/${page}.png`}
+                  alt={`Quran page ${page}`}
+                  className="mv-page-img"
+                  onError={() => setImgError(true)}
+                  draggable={false}
+                />
+                <WordOverlay
+                  page={page}
+                  debug={debugMode}
+                  onAyahClick={handleAyahClick}
+                  onStatus={handleStatus}
+                />
+              </>
+            )}
+          </div>
         </div>
       </main>
 

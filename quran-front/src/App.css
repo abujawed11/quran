@@ -257,20 +257,56 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #c8bfaf;
+  background: radial-gradient(ellipse at center, #b8ad9e 0%, #8c8278 100%);
   overflow: hidden;
 }
 
-/* Page card — the white shadow box around the image */
+/* =============================================================
+   Decorative Quran page frame
+============================================================= */
+.mv-page-frame {
+  position: relative;
+  height: calc(100vh - 28px);
+
+  /* Parchment-colored padding — visible as the gap between borders */
+  padding: 10px;
+  background: #e8d9b5;
+
+  /* Outer gold line + drop shadow */
+  border: 1.5px solid #a07828;
+  box-shadow:
+    /* inner gold line */
+    inset 0 0 0 1.5px #a07828,
+    /* inner parchment gap (same as bg) */
+    inset 0 0 0 8px #e8d9b5,
+    /* outer glow */
+    0 0 0 1px rgba(160, 120, 40, 0.35),
+    /* drop shadows */
+    0 6px 24px rgba(0, 0, 0, 0.45),
+    0 20px 60px rgba(0, 0, 0, 0.35);
+}
+
+/* Corner ornaments — small rotated diamonds at each corner */
+.mv-corner {
+  position: absolute;
+  width: 11px;
+  height: 11px;
+  background: #e8d9b5;
+  border: 1.5px solid #a07828;
+  transform: rotate(45deg);
+  z-index: 3;
+}
+.mv-corner--tl { top: -6px;  left: -6px;  }
+.mv-corner--tr { top: -6px;  right: -6px; }
+.mv-corner--bl { bottom: -6px; left: -6px;  }
+.mv-corner--br { bottom: -6px; right: -6px; }
+
+/* Page card — sits inside the frame, holds image + overlay */
 .mv-page-card {
   position: relative;
-  height: calc(100vh - 32px);
+  height: 100%;
   display: inline-flex;
   background: #fff;
-  border-radius: 3px;
-  box-shadow:
-    0 2px 8px rgba(0, 0, 0, 0.25),
-    0 12px 48px rgba(0, 0, 0, 0.45);
   overflow: hidden;
   user-select: none;
 }
@@ -280,14 +316,14 @@
   display: block;
   height: 100%;
   width: auto;
-  max-width: calc(100vw - 320px);
+  max-width: calc(100vw - 340px);
   object-fit: contain;
 }
 
 /* Error fallback */
 .mv-img-error {
   width: 400px;
-  height: calc(100vh - 32px);
+  height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
