@@ -32,7 +32,55 @@
 
 ---
 
-## Phase 3 — Full Audio Player (Next)
+## Phase 3 — Full Audio Player (Done — mostly)
+
+> **Remaining from Phase 3 (not yet implemented):**
+> - Keyboard shortcuts (Space=play/pause, Escape=stop, →=next, ←=prev)
+> - Playback speed selector (0.75x · 1x · 1.25x · 1.5x)
+
+---
+
+## Phase 3.5 — Full-Surah Playback (Next)
+
+### Concept
+- In addition to ayah-by-ayah playback, user can play a **complete Surah MP3 file** (one file per surah per reciter)
+- This gives uninterrupted, gap-free recitation — no stitching of individual ayah files
+- No per-ayah timestamps in this phase; ayah highlighting is not active during full-surah playback
+- Timestamps can be added later (see "Future: Timestamps" below)
+
+### Audio Files
+- Folder: `public/audio/{reciter}/full/{001-114}.mp3`
+- Naming: 3-digit zero-padded surah number (e.g. `001.mp3`, `002.mp3`, ... `114.mp3`)
+- One folder per reciter, same reciter IDs as ayah files
+- User drops their surah files in the folder and renames to this convention
+
+### UI — Navigator Sidebar
+- A **▶ Play Surah** button placed next to the Surah dropdown in the Navigator panel
+- Clicking it plays the full-surah file for the currently selected surah from the start
+- No ayah-level highlight shown during playback (surah-level only)
+- AudioPlayer bar shows: "Now Playing — Surah Al-Baqarah (Full)" (no ayah number)
+
+### Playback Mode
+- New play mode: `"surah-full"` (alongside existing `"single"` and `"continuous"`)
+- Uses a separate audio source URL: `/api/audio?r={reciter}&surah=full&f={001}`
+  (or direct path `/audio/{reciter}/full/001.mp3` if no proxy needed)
+- `playingAyah` state during full-surah mode: `{ surah, ayah: null, displayAyah: null, mode: "surah-full" }`
+
+### Auto-Advance (Surah → Next Surah)
+- User-toggleable (separate toggle or reuse existing auto-advance toggle)
+- When surah file ends:
+  - **ON** → automatically load and play next surah's full file (surah + 1)
+  - **OFF** → stop playback
+- At surah 114 → always stop
+
+### Future: Timestamps (not in this phase)
+Three approaches discussed:
+1. **Forced alignment** (WhisperX / Aeneas) — auto-detects ayah boundaries from audio; medium difficulty, high accuracy
+2. **Sum ayah MP3 durations** — calculate cumulative start times from existing ayah files; easy, but only valid if full-surah file = exact concatenation of ayah files
+3. **Pre-existing datasets** — Quran.com / EveryAyah.com provide timing JSON per reciter; easiest if available for the reciter
+Once timestamps exist, ayah highlights can track position in the full-surah file during playback.
+
+---
 
 ### Ayah Playback Strategy
 - Use existing ayah-by-ayah MP3 files (already downloaded)
@@ -160,9 +208,12 @@
 |------|---------|--------|
 | `public/mushaf/pages/{1-610}.png` | Page images | Done |
 | `public/mushaf/coords/{1-610}.json` | Word coordinates | Done |
-| `public/audio/Alafasy_128kbps/*.mp3` | Audio — Alafasy | Done |
-| `public/audio/AbdullaahJuhaynee_128kbps/*.mp3` | Audio — Juhaynee | Folder ready |
-| `public/audio/Abdurrahmaan_As-Sudais_192kbps/*.mp3` | Audio — Sudais | Folder ready |
+| `public/audio/Alafasy_128kbps/*.mp3` | Audio — Alafasy (ayah files) | Done |
+| `public/audio/AbdullaahJuhaynee_128kbps/*.mp3` | Audio — Juhaynee (ayah files) | Folder ready |
+| `public/audio/Abdurrahmaan_As-Sudais_192kbps/*.mp3` | Audio — Sudais (ayah files) | Folder ready |
+| `public/audio/Alafasy_128kbps/full/{001-114}.mp3` | Full-surah — Alafasy | Phase 3.5 |
+| `public/audio/AbdullaahJuhaynee_128kbps/full/{001-114}.mp3` | Full-surah — Juhaynee | Phase 3.5 |
+| `public/audio/Abdurrahmaan_As-Sudais_192kbps/full/{001-114}.mp3` | Full-surah — Sudais | Phase 3.5 |
 | `src/data/quranMeta.js` | Juz/Surah/Page metadata | Done (auto-generated) |
 | `src/data/translation_en.json` | English translation | Phase 5 |
 | `src/data/translation_ur.json` | Urdu translation | Phase 5 |
@@ -178,7 +229,7 @@ App
     │   ├── LocationInfo       (Juz / Surah / Ayah / Page display)
     │   ├── Navigator          (dropdowns + inputs + prev/next)
     │   ├── ReciterSelector
-    │   ├── AudioPlayer        (Phase 3) ← next
+    │   ├── AudioPlayer        (Phase 3 — done)
     │   ├── BookmarkPanel      (Phase 4)
     │   └── TranslationPanel   (Phase 5)
     └── PagePanel
@@ -196,7 +247,8 @@ App
 |---|-------|--------|
 | 1 | Layout — two-panel, sidebar, fixed page panel | Done |
 | 2 | Metadata — quranMeta.js, Juz/Surah navigation | Done |
-| 3 | Audio Player — player bar, context menu, auto-advance | Next |
+| 3 | Audio Player — player bar, context menu, auto-advance | Done (mostly) |
+| 3.5 | Full-Surah Playback — surah files, navigator button, auto-advance | Next |
 | 4 | Bookmarks — last read + bookmark list | Pending |
 | 5 | Translation — ayah translation in sidebar | Pending |
 | 6 | Polish — themes, zoom, animations, full-screen | Pending |
