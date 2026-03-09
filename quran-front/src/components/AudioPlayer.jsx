@@ -25,15 +25,17 @@ export default function AudioPlayer({
   if (!playingAyah) return null;
 
   const { surah, displayAyah } = playingAyah;
-  const surahName = SURAHS[surah]?.nameEn ?? "";
+  const surahName  = SURAHS[surah]?.nameEn ?? "";
+  const isFullMode = displayAyah === null;
+  const title      = isFullMode ? `${surahName} · Full Surah` : `${surahName} · Ayah ${displayAyah}`;
 
   return (
     <div className="ap">
 
       {/* Now playing info */}
       <div className="ap-now-playing">
-        <span className="ap-label">Now Playing</span>
-        <span className="ap-title">{surahName} · Ayah {displayAyah}</span>
+        <span className="ap-label">{isFullMode ? "Now Playing · Full Surah" : "Now Playing"}</span>
+        <span className="ap-title">{title}</span>
       </div>
 
       {/* Progress bar */}

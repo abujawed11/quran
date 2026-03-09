@@ -201,6 +201,20 @@
 .sb-btn:disabled { opacity: 0.3; cursor: default; }
 .sb-btn--go { padding: 8px 16px; }
 .sb-btn--nav { flex: 1; text-align: center; }
+.sb-btn--play-surah {
+  width: 100%;
+  margin-top: 8px;
+  text-align: center;
+  color: #c49e48;
+  border-color: rgba(196, 158, 72, 0.4);
+  background: rgba(196, 158, 72, 0.08);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+}
+.sb-btn--play-surah:hover:not(:disabled) {
+  background: rgba(196, 158, 72, 0.2);
+  border-color: rgba(196, 158, 72, 0.65);
+}
 
 /* Row helpers */
 .sb-row {

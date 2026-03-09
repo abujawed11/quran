@@ -6,7 +6,7 @@ import AudioPlayer from "./AudioPlayer";
 export default function Sidebar({
   page, totalPages, reciter, reciters, clickedAyah,
   debugMode, overlayStatus,
-  onPageChange, onReciterChange, onDebugToggle,
+  onPageChange, onReciterChange, onDebugToggle, onPlayFullSurah,
   // Audio player
   playingAyah, isPlaying, autoAdvance, currentTime, duration,
   onPlay, onPause, onStop, onNext, onPrev, onToggleAutoAdvance, onSeek,
@@ -87,6 +87,13 @@ export default function Sidebar({
               </option>
             ))}
           </select>
+          <button
+            className="sb-btn sb-btn--play-surah"
+            onClick={() => onPlayFullSurah(meta.surahNum)}
+            title={`Play full Surah ${meta.surahEn}`}
+          >
+            ▶ Play Full Surah
+          </button>
         </div>
 
         <div className="sb-field">

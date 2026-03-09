@@ -18,6 +18,11 @@ const audioUrl = (reciter, surah, ayah) => {
   return `/api/audio?r=${encodeURIComponent(reciter)}&f=${file}`;
 };
 
+const fullSurahUrl = (reciter, surah) => {
+  const file = `full/${String(surah).padStart(3,"0")}`;
+  return `/api/audio?r=${encodeURIComponent(reciter)}&f=${file}`;
+};
+
 const displayAyahNum = (surah, ayah) => (surah === 1 ? ayah - 1 : ayah);
 
 const nextAyah = (surah, ayah) => {
@@ -91,6 +96,25 @@ export default function MushafViewer() {
       const cur  = playingRef.current;
       const mode = playModeRef.current;
 
+      // ── Full-surah mode ──────────────────────────────────────────────────
+      if (mode === "surah-full") {
+        if (!autoAdvRef.current || !cur || cur.surah >= 114) {
+          setPlayingAyah(null);
+          playingRef.current = null;
+          setIsPlaying(false);
+          return;
+        }
+        const nextSurah = cur.surah + 1;
+        const np = { surah: nextSurah, ayah: null, displayAyah: null };
+        setPlayingAyah(np);
+        playingRef.current = np;
+        audio.src = fullSurahUrl(reciterRef.current, nextSurah);
+        audio.load();
+        audio.play().catch((e) => console.warn("[Audio]", e.message));
+        return;
+      }
+
+      // ── Ayah mode ────────────────────────────────────────────────────────
       if (!cur || mode === "single" || !autoAdvRef.current) {
         setIsPlaying(false);
         return;
@@ -178,6 +202,22 @@ export default function MushafViewer() {
     }
   }, []);
 
+  // ── Full-surah play ───────────────────────────────────────────────────────
+  const playFullSurah = useCallback((surahNum) => {
+    const np = { surah: surahNum, ayah: null, displayAyah: null };
+    setPlayingAyah(np);
+    playingRef.current  = np;
+    playModeRef.current = "surah-full";
+    setCurrentTime(0);
+    setDuration(0);
+
+    const audio = audioRef.current;
+    audio.pause();
+    audio.src = fullSurahUrl(reciterRef.current, surahNum);
+    audio.load();
+    audio.play().catch((e) => console.warn("[Audio]", e.message));
+  }, []);
+
   // ── Navigation ────────────────────────────────────────────────────────────
   const goToPage = (n) => {
     const clamped = Math.max(1, Math.min(TOTAL_PAGES, n));
@@ -225,6 +265,10 @@ export default function MushafViewer() {
   const handleNext = () => {
     const cur = playingRef.current;
     if (!cur) return;
+    if (playModeRef.current === "surah-full") {
+      if (cur.surah < 114) playFullSurah(cur.surah + 1);
+      return;
+    }
     const next = nextAyah(cur.surah, cur.ayah);
     if (!next) return;
     playAyah(next.surah, next.ayah, displayAyahNum(next.surah, next.ayah), playModeRef.current);
@@ -233,9 +277,13 @@ export default function MushafViewer() {
   const handlePrev = () => {
     const cur = playingRef.current;
     if (!cur) return;
-    // If > 3s into ayah, restart it; otherwise go to previous
+    // If > 3s in, restart; otherwise go to previous
     if (audioRef.current && audioRef.current.currentTime > 3) {
       audioRef.current.currentTime = 0;
+      return;
+    }
+    if (playModeRef.current === "surah-full") {
+      if (cur.surah > 1) playFullSurah(cur.surah - 1);
       return;
     }
     const prev = prevAyah(cur.surah, cur.ayah);
@@ -275,6 +323,7 @@ export default function MushafViewer() {
         onPageChange={goToPage}
         onReciterChange={handleReciterChange}
         onDebugToggle={() => setDebugMode((d) => !d)}
+        onPlayFullSurah={playFullSurah}
         // Audio player props
         playingAyah={playingAyah}
         isPlaying={isPlaying}
