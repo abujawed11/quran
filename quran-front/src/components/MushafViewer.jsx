@@ -177,9 +177,6 @@ export default function MushafViewer() {
       }
 
       const dAyah = displayAyahNum(next.surah, next.ayah);
-      const np    = { surah: next.surah, ayah: next.ayah, displayAyah: dAyah };
-      setPlayingAyah(np);
-      playingRef.current = np;
 
       // Auto-navigate if this ayah is not on the current page
       const key = `${next.surah}:${next.ayah}`;
@@ -195,7 +192,11 @@ export default function MushafViewer() {
       }
 
       // Play bismillah first when entering a new surah
+      // While bismillah plays, show the surah but no ayah highlight (no coords for bismillah header)
       if (next.ayah === 1 && needsBismillah(next.surah)) {
+        const bismillahState = { surah: next.surah, ayah: null, displayAyah: null };
+        setPlayingAyah(bismillahState);
+        playingRef.current = bismillahState;
         pendingAfterBismillah.current = { type: "ayah", surah: next.surah, ayah: next.ayah, dAyah, mode: playModeRef.current };
         playModeRef.current = "bismillah";
         audio.src = bismillahUrl(reciterRef.current);
@@ -203,6 +204,10 @@ export default function MushafViewer() {
         audio.play().catch((e) => console.warn("[Audio]", e.message));
         return;
       }
+
+      const np = { surah: next.surah, ayah: next.ayah, displayAyah: dAyah };
+      setPlayingAyah(np);
+      playingRef.current = np;
 
       // Play next ayah
       audio.src = audioUrl(reciterRef.current, next.surah, next.ayah);
