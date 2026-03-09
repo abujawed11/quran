@@ -1,5 +1,5 @@
 // src/components/MushafViewer.jsx
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { SURAHS } from "../data/quranMeta";
 import WordOverlay      from "./WordOverlay";
 import Sidebar          from "./Sidebar";
@@ -176,8 +176,8 @@ export default function MushafViewer() {
       if (!ts || ts.length === 0) return;
       const active = ts.find((t) => t.time > audio.currentTime) ?? ts[ts.length - 1];
       const cur = playingRef.current;
-      if (!cur || cur.ayah === active.ayah) return;
-      const np = { surah: cur.surah, ayah: active.ayah, displayAyah: displayAyahNum(cur.surah, active.ayah) };
+      if (!cur || (cur.ayah === active.ayah && cur.ayahEnd === (active.ayahEnd ?? null))) return;
+      const np = { surah: cur.surah, ayah: active.ayah, ayahEnd: active.ayahEnd ?? null, displayAyah: active.ayah };
       setPlayingAyah(np);
       playingRef.current = np;
     };
@@ -334,7 +334,14 @@ export default function MushafViewer() {
   }, []);
 
   // ── Derived ───────────────────────────────────────────────────────────────
-  const playingAyahKey = playingAyah ? `${playingAyah.surah}:${playingAyah.ayah}` : null;
+  const playingAyahKey = useMemo(() => {
+    if (!playingAyah?.ayah) return null;
+    const s = playingAyah.surah;
+    const end = playingAyah.ayahEnd ?? playingAyah.ayah;
+    const keys = new Set();
+    for (let a = playingAyah.ayah; a <= end; a++) keys.add(`${s}:${a}`);
+    return keys;
+  }, [playingAyah]);
 
   return (
     <div className="mv-shell">

@@ -105,7 +105,7 @@ export default function WordOverlay({ page, debug, playingAyahKey, onAyahClick, 
     <div className="wo-layer" ref={layerRef}>
       {canRender && ayahLines.map(({ surah, ayah, displayAyah, ayahKey, lineKey, minX, maxX, y, h }) => {
         const isHovered = hoveredAyah === ayahKey;
-        const isPlaying = playingAyahKey === ayahKey;
+        const isPlaying = playingAyahKey?.has(ayahKey) ?? false;
         const { scaleX, scaleY, yOffset } = scaleInfo;
         return (
           <div
