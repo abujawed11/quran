@@ -61,7 +61,7 @@ export default function WordOverlay({ page, debug, playingAyahKey, onAyahClick, 
     const ayahLineMap = {};
     Object.entries(coords).forEach(([key, box]) => {
       const [s, a] = key.split(":");
-      if (s === "1" && a === "1") return; // skip decorative Bismillah
+
       const ayahKey = `${s}:${a}`;
       if (!ayahLineMap[ayahKey]) ayahLineMap[ayahKey] = { surah: +s, ayah: +a, lines: {} };
       const lines = ayahLineMap[ayahKey].lines;

@@ -69,6 +69,7 @@ export default function MushafViewer() {
   const reciterRef     = useRef(RECITERS[0].id); // mirrors reciter
   const pageRef        = useRef(1);    // mirrors page
   const ayahKeysRef    = useRef(new Set()); // ayah keys on current page
+  const timestampsRef  = useRef(null); // loaded timestamps for full-surah highlighting
 
   // ── Sync refs with state ──────────────────────────────────────────────────
   useEffect(() => { reciterRef.current  = reciter;     }, [reciter]);
@@ -101,6 +102,7 @@ export default function MushafViewer() {
         if (!autoAdvRef.current || !cur || cur.surah >= 114) {
           setPlayingAyah(null);
           playingRef.current = null;
+          timestampsRef.current = null;
           setIsPlaying(false);
           return;
         }
@@ -108,6 +110,12 @@ export default function MushafViewer() {
         const np = { surah: nextSurah, ayah: null, displayAyah: null };
         setPlayingAyah(np);
         playingRef.current = np;
+        // Load timestamps for next surah
+        timestampsRef.current = null;
+        fetch(`/timestamps/${nextSurah}.json`)
+          .then((r) => r.ok ? r.json() : null)
+          .then((data) => { if (data?.timestamps) timestampsRef.current = data.timestamps; })
+          .catch(() => {});
         audio.src = fullSurahUrl(reciterRef.current, nextSurah);
         audio.load();
         audio.play().catch((e) => console.warn("[Audio]", e.message));
@@ -160,7 +168,19 @@ export default function MushafViewer() {
       }
     };
 
-    const onTimeUpdate      = () => setCurrentTime(audio.currentTime);
+    const onTimeUpdate = () => {
+      setCurrentTime(audio.currentTime);
+      // Timestamp-based ayah highlighting for full-surah mode
+      if (playModeRef.current !== "surah-full") return;
+      const ts = timestampsRef.current;
+      if (!ts || ts.length === 0) return;
+      const active = ts.find((t) => t.time > audio.currentTime) ?? ts[ts.length - 1];
+      const cur = playingRef.current;
+      if (!cur || cur.ayah === active.ayah) return;
+      const np = { surah: cur.surah, ayah: active.ayah, displayAyah: displayAyahNum(cur.surah, active.ayah) };
+      setPlayingAyah(np);
+      playingRef.current = np;
+    };
     const onDurationChange  = () => { if (isFinite(audio.duration)) setDuration(audio.duration); };
     const onPlay            = () => setIsPlaying(true);
     const onPause           = () => setIsPlaying(false);
@@ -210,6 +230,13 @@ export default function MushafViewer() {
     playModeRef.current = "surah-full";
     setCurrentTime(0);
     setDuration(0);
+
+    // Load timestamps for ayah-level highlighting
+    timestampsRef.current = null;
+    fetch(`/timestamps/${surahNum}.json`)
+      .then((r) => r.ok ? r.json() : null)
+      .then((data) => { if (data?.timestamps) timestampsRef.current = data.timestamps; })
+      .catch(() => {});
 
     const audio = audioRef.current;
     audio.pause();

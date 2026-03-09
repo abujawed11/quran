@@ -1,5 +1,5 @@
 // src/components/Sidebar.jsx
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { SURAHS, JUZS, getPageMeta } from "../data/quranMeta";
 import AudioPlayer from "./AudioPlayer";
 
@@ -16,7 +16,17 @@ export default function Sidebar({
   // Keep page input in sync when page changes via other controls (prev/next, etc.)
   useEffect(() => setPageInput(String(page)), [page]);
 
-  const meta = useMemo(() => getPageMeta(page), [page]);
+  // Track selected surah independently so that when multiple surahs share a page
+  // (e.g. 103/104/105 all on page 607), picking surah 103 doesn't snap back to 105.
+  const meta0 = useMemo(() => getPageMeta(page), [page]);
+  const [selectedSurah, setSelectedSurah] = useState(meta0.surahNum);
+  const skipSurahSync = useRef(false);
+  useEffect(() => {
+    if (skipSurahSync.current) { skipSurahSync.current = false; return; }
+    setSelectedSurah(meta0.surahNum);
+  }, [page]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const meta = meta0;
 
   const handlePageGo = () => {
     const n = parseInt(pageInput, 10);
@@ -78,8 +88,13 @@ export default function Sidebar({
           <label className="sb-label">Surah</label>
           <select
             className="sb-select"
-            value={meta.surahNum}
-            onChange={(e) => onPageChange(SURAHS[+e.target.value].page)}
+            value={selectedSurah}
+            onChange={(e) => {
+              const num = +e.target.value;
+              setSelectedSurah(num);
+              skipSurahSync.current = true;
+              onPageChange(SURAHS[num].page);
+            }}
           >
             {SURAHS.slice(1).map((s) => (
               <option key={s.number} value={s.number}>
@@ -89,8 +104,8 @@ export default function Sidebar({
           </select>
           <button
             className="sb-btn sb-btn--play-surah"
-            onClick={() => onPlayFullSurah(meta.surahNum)}
-            title={`Play full Surah ${meta.surahEn}`}
+            onClick={() => onPlayFullSurah(selectedSurah)}
+            title={`Play full Surah ${SURAHS[selectedSurah]?.nameEn}`}
           >
             ▶ Play Full Surah
           </button>
