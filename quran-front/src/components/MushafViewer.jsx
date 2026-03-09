@@ -234,6 +234,19 @@ export default function MushafViewer() {
       const np = { surah: cur.surah, ayah: active.ayah, ayahEnd: active.ayahEnd ?? null, displayAyah: active.ayah };
       setPlayingAyah(np);
       playingRef.current = np;
+
+      // Auto-navigate page if this ayah is not visible
+      const ayahKey = `${cur.surah}:${active.ayah}`;
+      if (!ayahKeysRef.current.has(ayahKey)) {
+        const surahPage = SURAHS[cur.surah]?.page ?? 0;
+        const curr      = pageRef.current;
+        const target    = surahPage > curr ? surahPage : curr + 1;
+        const clamped   = Math.max(1, Math.min(TOTAL_PAGES, target));
+        pageRef.current = clamped;
+        setPage(clamped);
+        setImgError(false);
+        setOverlayStatus(null);
+      }
     };
     const onDurationChange  = () => { if (isFinite(audio.duration)) setDuration(audio.duration); };
     const onPlay            = () => setIsPlaying(true);
