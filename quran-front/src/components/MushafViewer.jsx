@@ -25,6 +25,10 @@ const fullSurahUrl = (reciter, surah) => {
 
 const displayAyahNum = (surah, ayah) => (surah === 1 ? ayah - 1 : ayah);
 
+// Surah 1: Bismillah is ayah 1 (already in the audio). Surah 9: no Bismillah.
+const needsBismillah = (surah) => surah !== 1 && surah !== 9;
+const bismillahUrl   = (reciter) => audioUrl(reciter, 1, 1); // Surah 1 Ayah 1 = Bismillah
+
 const nextAyah = (surah, ayah) => {
   const max = SURAHS[surah]?.ayahs;
   if (!max) return null;
@@ -69,7 +73,8 @@ export default function MushafViewer() {
   const reciterRef     = useRef(RECITERS[0].id); // mirrors reciter
   const pageRef        = useRef(1);    // mirrors page
   const ayahKeysRef    = useRef(new Set()); // ayah keys on current page
-  const timestampsRef  = useRef(null); // loaded timestamps for full-surah highlighting
+  const timestampsRef          = useRef(null); // loaded timestamps for full-surah highlighting
+  const pendingAfterBismillah  = useRef(null); // { type:"ayah"|"surah", surah, ayah, dAyah, mode }
 
   // ── Sync refs with state ──────────────────────────────────────────────────
   useEffect(() => { reciterRef.current  = reciter;     }, [reciter]);
@@ -97,6 +102,34 @@ export default function MushafViewer() {
       const cur  = playingRef.current;
       const mode = playModeRef.current;
 
+      // ── Bismillah just finished — play the pending content ────────────────
+      if (mode === "bismillah") {
+        const pending = pendingAfterBismillah.current;
+        pendingAfterBismillah.current = null;
+        if (!pending) { setIsPlaying(false); return; }
+
+        if (pending.type === "ayah") {
+          const np = { surah: pending.surah, ayah: pending.ayah, displayAyah: pending.dAyah };
+          setPlayingAyah(np);
+          playingRef.current  = np;
+          playModeRef.current = pending.mode;
+          audio.src = audioUrl(reciterRef.current, pending.surah, pending.ayah);
+          audio.load();
+          audio.play().catch((e) => console.warn("[Audio]", e.message));
+          const after = nextAyah(pending.surah, pending.ayah);
+          if (after && preloadRef.current) {
+            preloadRef.current.src = audioUrl(reciterRef.current, after.surah, after.ayah);
+            preloadRef.current.load();
+          }
+        } else { // "surah"
+          playModeRef.current = "surah-full";
+          audio.src = fullSurahUrl(reciterRef.current, pending.surah);
+          audio.load();
+          audio.play().catch((e) => console.warn("[Audio]", e.message));
+        }
+        return;
+      }
+
       // ── Full-surah mode ──────────────────────────────────────────────────
       if (mode === "surah-full") {
         if (!autoAdvRef.current || !cur || cur.surah >= 114) {
@@ -110,13 +143,19 @@ export default function MushafViewer() {
         const np = { surah: nextSurah, ayah: null, displayAyah: null };
         setPlayingAyah(np);
         playingRef.current = np;
-        // Load timestamps for next surah
+        // Pre-fetch timestamps for next surah
         timestampsRef.current = null;
         fetch(`/timestamps/${nextSurah}.json`)
           .then((r) => r.ok ? r.json() : null)
           .then((data) => { if (data?.timestamps) timestampsRef.current = data.timestamps; })
           .catch(() => {});
-        audio.src = fullSurahUrl(reciterRef.current, nextSurah);
+        if (needsBismillah(nextSurah)) {
+          pendingAfterBismillah.current = { type: "surah", surah: nextSurah };
+          playModeRef.current = "bismillah";
+          audio.src = bismillahUrl(reciterRef.current);
+        } else {
+          audio.src = fullSurahUrl(reciterRef.current, nextSurah);
+        }
         audio.load();
         audio.play().catch((e) => console.warn("[Audio]", e.message));
         return;
@@ -155,7 +194,17 @@ export default function MushafViewer() {
         setOverlayStatus(null);
       }
 
-      // Play next
+      // Play bismillah first when entering a new surah
+      if (next.ayah === 1 && needsBismillah(next.surah)) {
+        pendingAfterBismillah.current = { type: "ayah", surah: next.surah, ayah: next.ayah, dAyah, mode: playModeRef.current };
+        playModeRef.current = "bismillah";
+        audio.src = bismillahUrl(reciterRef.current);
+        audio.load();
+        audio.play().catch((e) => console.warn("[Audio]", e.message));
+        return;
+      }
+
+      // Play next ayah
       audio.src = audioUrl(reciterRef.current, next.surah, next.ayah);
       audio.load();
       audio.play().catch((e) => console.warn("[Audio]", e.message));
@@ -226,8 +275,7 @@ export default function MushafViewer() {
   const playFullSurah = useCallback((surahNum) => {
     const np = { surah: surahNum, ayah: null, displayAyah: null };
     setPlayingAyah(np);
-    playingRef.current  = np;
-    playModeRef.current = "surah-full";
+    playingRef.current = np;
     setCurrentTime(0);
     setDuration(0);
 
@@ -240,7 +288,14 @@ export default function MushafViewer() {
 
     const audio = audioRef.current;
     audio.pause();
-    audio.src = fullSurahUrl(reciterRef.current, surahNum);
+    if (needsBismillah(surahNum)) {
+      pendingAfterBismillah.current = { type: "surah", surah: surahNum };
+      playModeRef.current = "bismillah";
+      audio.src = bismillahUrl(reciterRef.current);
+    } else {
+      playModeRef.current = "surah-full";
+      audio.src = fullSurahUrl(reciterRef.current, surahNum);
+    }
     audio.load();
     audio.play().catch((e) => console.warn("[Audio]", e.message));
   }, []);
