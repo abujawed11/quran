@@ -140,7 +140,8 @@ export default function MushafViewer() {
           return;
         }
         const nextSurah = cur.surah + 1;
-        const np = { surah: nextSurah, ayah: null, displayAyah: null };
+        const hasBismillah = needsBismillah(nextSurah);
+        const np = { surah: nextSurah, ayah: hasBismillah ? 0 : null, displayAyah: hasBismillah ? 0 : null };
         setPlayingAyah(np);
         playingRef.current = np;
         // Pre-fetch timestamps for next surah
@@ -149,7 +150,7 @@ export default function MushafViewer() {
           .then((r) => r.ok ? r.json() : null)
           .then((data) => { if (data?.timestamps) timestampsRef.current = data.timestamps; })
           .catch(() => {});
-        if (needsBismillah(nextSurah)) {
+        if (hasBismillah) {
           pendingAfterBismillah.current = { type: "surah", surah: nextSurah };
           playModeRef.current = "bismillah";
           audio.src = bismillahUrl(reciterRef.current);
@@ -192,9 +193,9 @@ export default function MushafViewer() {
       }
 
       // Play bismillah first when entering a new surah
-      // While bismillah plays, show the surah but no ayah highlight (no coords for bismillah header)
+      // ayah:0 is the convention for the bismillah header box in the coords file
       if (next.ayah === 1 && needsBismillah(next.surah)) {
-        const bismillahState = { surah: next.surah, ayah: null, displayAyah: null };
+        const bismillahState = { surah: next.surah, ayah: 0, displayAyah: 0 };
         setPlayingAyah(bismillahState);
         playingRef.current = bismillahState;
         pendingAfterBismillah.current = { type: "ayah", surah: next.surah, ayah: next.ayah, dAyah, mode: playModeRef.current };
@@ -277,12 +278,15 @@ export default function MushafViewer() {
 
     const audio = audioRef.current;
     audio.pause();
-    audio.src = audioUrl(reciterRef.current, surah, ayah);
+    // ayah === 0 means Bismillah header — always play 001001.mp3
+    const audioSurah = ayah === 0 ? 1 : surah;
+    const audioAyah  = ayah === 0 ? 1 : ayah;
+    audio.src = audioUrl(reciterRef.current, audioSurah, audioAyah);
     audio.load();
     audio.play().catch((e) => console.warn("[Audio]", e.message));
 
-    // Preload next
-    const next = nextAyah(surah, ayah);
+    // Preload next (for bismillah ayah=0, next is surah:1)
+    const next = ayah === 0 ? { surah, ayah: 1 } : nextAyah(surah, ayah);
     if (next && preloadRef.current) {
       preloadRef.current.src = audioUrl(reciterRef.current, next.surah, next.ayah);
       preloadRef.current.load();
@@ -291,7 +295,8 @@ export default function MushafViewer() {
 
   // ── Full-surah play ───────────────────────────────────────────────────────
   const playFullSurah = useCallback((surahNum) => {
-    const np = { surah: surahNum, ayah: null, displayAyah: null };
+    const hasBismillah = needsBismillah(surahNum);
+    const np = { surah: surahNum, ayah: hasBismillah ? 0 : null, displayAyah: hasBismillah ? 0 : null };
     setPlayingAyah(np);
     playingRef.current = np;
     setCurrentTime(0);
@@ -306,7 +311,7 @@ export default function MushafViewer() {
 
     const audio = audioRef.current;
     audio.pause();
-    if (needsBismillah(surahNum)) {
+    if (hasBismillah) {
       pendingAfterBismillah.current = { type: "surah", surah: surahNum };
       playModeRef.current = "bismillah";
       audio.src = bismillahUrl(reciterRef.current);
@@ -408,8 +413,10 @@ export default function MushafViewer() {
 
   // ── Derived ───────────────────────────────────────────────────────────────
   const playingAyahKey = useMemo(() => {
-    if (!playingAyah?.ayah) return null;
+    if (playingAyah?.ayah === null || playingAyah?.ayah === undefined) return null;
     const s = playingAyah.surah;
+    // ayah === 0 means bismillah header — highlight just "S:0"
+    if (playingAyah.ayah === 0) return new Set([`${s}:0`]);
     const end = playingAyah.ayahEnd ?? playingAyah.ayah;
     const keys = new Set();
     for (let a = playingAyah.ayah; a <= end; a++) keys.add(`${s}:${a}`);
