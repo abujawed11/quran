@@ -1,34 +1,38 @@
 {
-  "surah": 1,
+  "surah": 95,
   "reciter": "Alafasy_128kbps",
   "timestamps": [
     {
       "ayah": 1,
-      "time": 6.979
+      "time": 5.236
     },
     {
       "ayah": 2,
-      "time": 12.141
+      "time": 9.846
     },
     {
       "ayah": 3,
-      "time": 16.498
+      "time": 15.182
     },
     {
       "ayah": 4,
-      "time": 20.447
+      "time": 25.059
     },
     {
       "ayah": 5,
-      "time": 26.204
+      "time": 32.473
     },
     {
       "ayah": 6,
-      "time": 31.085
+      "time": 43.482
     },
     {
       "ayah": 7,
-      "time": 46.915
+      "time": 49.634
+    },
+    {
+      "ayah": 8,
+      "time": 57.757
     }
   ]
 }
