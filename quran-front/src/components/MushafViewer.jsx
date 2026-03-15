@@ -1,6 +1,6 @@
 // src/components/MushafViewer.jsx
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
-import { SURAHS } from "../data/quranMeta";
+import { SURAHS, AYAH_PAGES } from "../data/quranMeta";
 import WordOverlay      from "./WordOverlay";
 import Sidebar          from "./Sidebar";
 import AyahContextMenu  from "./AyahContextMenu";
@@ -239,11 +239,12 @@ export default function MushafViewer() {
       // Auto-navigate page if this ayah is not visible
       const ayahKey = `${cur.surah}:${active.ayah}`;
       if (!ayahKeysRef.current.has(ayahKey)) {
-        const surahPage = SURAHS[cur.surah]?.page ?? 0;
-        const curr      = pageRef.current;
-        const target    = surahPage > curr ? surahPage : curr + 1;
-        const clamped   = Math.max(1, Math.min(TOTAL_PAGES, target));
-        pageRef.current = clamped;
+        const directPage = AYAH_PAGES[ayahKey];
+        const surahPage  = SURAHS[cur.surah]?.page ?? 0;
+        const curr       = pageRef.current;
+        const target     = directPage ?? (surahPage > curr ? surahPage : curr + 1);
+        const clamped    = Math.max(1, Math.min(TOTAL_PAGES, target));
+        pageRef.current  = clamped;
         setPage(clamped);
         setImgError(false);
         setOverlayStatus(null);
