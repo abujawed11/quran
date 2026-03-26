@@ -9,6 +9,8 @@ const RECITERS = [
   { id: "Alafasy_128kbps",                label: "Mishary Alafasy" },
   { id: "AbdullaahJuhaynee_128kbps",      label: "Abdullaah Al-Juhaynee" },
   { id: "Abdurrahmaan_As-Sudais_192kbps", label: "Abdurrahmaan As-Sudais" },
+  { id: "Abdul_Basit_Murattal_192kbps",   label: "Abdul Basit (Murattal)" },
+  { id: "Abdul_Basit_Mujawwad_128kbps",   label: "Abdul Basit (Mujawwad)" },
 ];
 const TOTAL_PAGES = 610;
 
