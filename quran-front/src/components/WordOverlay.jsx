@@ -15,7 +15,7 @@ import { useEffect, useState, useRef, useMemo } from "react";
 export default function WordOverlay({ page, debug, playingAyahKey, onAyahClick, onAyahRightClick, onStatus }) {
   const [coords, setCoords]           = useState(null);
   const [displaySize, setDisplaySize] = useState(null);
-  const [hoveredAyah, setHoveredAyah] = useState(null);
+  const [hoveredAyah, setHoveredAyah] = useState(null); // { key, surah, displayAyah } | null
   const layerRef                      = useRef(null);
 
   // ── Fetch coords ──────────────────────────────────────────────────────────
@@ -156,7 +156,7 @@ export default function WordOverlay({ page, debug, playingAyahKey, onAyahClick, 
 
       {/* FORMAT B — coord-gen ayah-level boxes */}
       {canRenderNew && newFormatLines.map(({ surah, ayah, displayAyah, ayahKey, lineKey, x, y, w, h }) => {
-        const isHovered = hoveredAyah === ayahKey;
+        const isHovered = hoveredAyah?.key === ayahKey;
         const isPlaying = playingAyahKey?.has(ayahKey) ?? false;
         const { scaleX, scaleY } = newFormatScale;
         return (
@@ -175,7 +175,7 @@ export default function WordOverlay({ page, debug, playingAyahKey, onAyahClick, 
               height: h * scaleY,
             }}
             title={debug ? `${surah}:${displayAyah}` : undefined}
-            onMouseEnter={() => setHoveredAyah(ayahKey)}
+            onMouseEnter={() => setHoveredAyah({ key: ayahKey, surah, displayAyah })}
             onMouseLeave={() => setHoveredAyah(null)}
             onClick={() => onAyahClick(surah, ayah, displayAyah)}
             onContextMenu={(e) => {
@@ -188,7 +188,7 @@ export default function WordOverlay({ page, debug, playingAyahKey, onAyahClick, 
 
       {/* FORMAT A — legacy word-level boxes */}
       {canRenderOld && ayahLines.map(({ surah, ayah, displayAyah, ayahKey, lineKey, minX, maxX, y, h }) => {
-        const isHovered = hoveredAyah === ayahKey;
+        const isHovered = hoveredAyah?.key === ayahKey;
         const isPlaying = playingAyahKey?.has(ayahKey) ?? false;
         const { scaleX, scaleY, yOffset } = scaleInfo;
         return (
@@ -207,7 +207,7 @@ export default function WordOverlay({ page, debug, playingAyahKey, onAyahClick, 
               height: h                      * scaleY,
             }}
             title={debug ? `${surah}:${displayAyah}` : undefined}
-            onMouseEnter={() => setHoveredAyah(ayahKey)}
+            onMouseEnter={() => setHoveredAyah({ key: ayahKey, surah, displayAyah })}
             onMouseLeave={() => setHoveredAyah(null)}
             onClick={() => onAyahClick(surah, ayah, displayAyah)}
             onContextMenu={(e) => {
@@ -217,6 +217,17 @@ export default function WordOverlay({ page, debug, playingAyahKey, onAyahClick, 
           />
         );
       })}
+
+      {/* Hover info badge */}
+      {hoveredAyah && (
+        <div className="wo-ayah-badge">
+          <span className="wo-ayah-badge__label">Surah</span>
+          <span className="wo-ayah-badge__value">{hoveredAyah.surah}</span>
+          <span className="wo-ayah-badge__sep">·</span>
+          <span className="wo-ayah-badge__label">Ayah</span>
+          <span className="wo-ayah-badge__value">{hoveredAyah.displayAyah}</span>
+        </div>
+      )}
 
     </div>
   );

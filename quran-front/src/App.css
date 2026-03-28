@@ -389,6 +389,38 @@
   outline: 2px solid rgba(40, 160, 80, 0.9);
 }
 
+.wo-ayah-badge {
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(20, 20, 20, 0.82);
+  color: #f0e0a0;
+  font-size: 12px;
+  font-family: sans-serif;
+  padding: 4px 10px;
+  border-radius: 6px;
+  pointer-events: none;
+  white-space: nowrap;
+  backdrop-filter: blur(4px);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+  z-index: 10;
+}
+.wo-ayah-badge__label {
+  color: #aaa;
+  font-size: 11px;
+}
+.wo-ayah-badge__value {
+  font-weight: 600;
+}
+.wo-ayah-badge__sep {
+  color: #666;
+  margin: 0 2px;
+}
+
 /* =============================================================
    Audio Player (in sidebar)
 ============================================================= */
