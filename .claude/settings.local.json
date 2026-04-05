@@ -4,7 +4,10 @@
       "mcp__ide__getDiagnostics",
       "Bash(node:*)",
       "WebSearch",
-      "Bash(python:*)"
+      "Bash(python:*)",
+      "Bash(cat D:/react/quran/scripts/*.js)",
+      "Bash(ls D:/react/quran/quran-front/*.js)",
+      "Bash(ls D:/react/quran/quran-front/*.ts)"
     ]
   }
 }

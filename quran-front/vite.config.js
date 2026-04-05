@@ -48,6 +48,40 @@ export default defineConfig({
           res.setHeader("Accept-Ranges",       "bytes");
           fs.createReadStream(filePath).pipe(res);
         });
+
+        // Serve translation audio: /api/translation?t={translator}&f={surahAyah}
+        server.middlewares.use("/api/translation", (req, res) => {
+          const qs         = req.url?.slice(1) ?? "";
+          const params     = new URLSearchParams(qs);
+          const translator = params.get("t");
+          const file       = params.get("f");
+
+          if (!translator || !file) {
+            res.statusCode = 400;
+            res.end("Bad request");
+            return;
+          }
+
+          const filePath = path.join(
+            process.cwd(),
+            "public/audio/translations",
+            translator,
+            file + ".mp3"
+          );
+
+          if (!fs.existsSync(filePath)) {
+            res.statusCode = 404;
+            res.end("Not found");
+            return;
+          }
+
+          const stat = fs.statSync(filePath);
+          res.setHeader("Content-Type",        "audio/mpeg");
+          res.setHeader("Content-Length",      stat.size);
+          res.setHeader("Content-Disposition", "inline");
+          res.setHeader("Accept-Ranges",       "bytes");
+          fs.createReadStream(filePath).pipe(res);
+        });
       },
     },
   ],

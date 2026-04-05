@@ -14,6 +14,7 @@ export default function AudioPlayer({
   autoAdvance,
   currentTime,
   duration,
+  playPhase,
   onPlay,
   onPause,
   onStop,
@@ -28,13 +29,16 @@ export default function AudioPlayer({
   const surahName  = SURAHS[surah]?.nameEn ?? "";
   const isFullMode = displayAyah === null;
   const title      = isFullMode ? `${surahName} · Full Surah` : `${surahName} · Ayah ${displayAyah}`;
+  const isTranslation = playPhase === "translation";
 
   return (
     <div className="ap">
 
       {/* Now playing info */}
       <div className="ap-now-playing">
-        <span className="ap-label">{isFullMode ? "Now Playing · Full Surah" : "Now Playing"}</span>
+        <span className={`ap-label${isTranslation ? " ap-label--translation" : ""}`}>
+          {isFullMode ? "Now Playing · Full Surah" : isTranslation ? "Translation" : "Now Playing"}
+        </span>
         <span className="ap-title">{title}</span>
       </div>
 

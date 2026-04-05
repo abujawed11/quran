@@ -12,12 +12,21 @@ const RECITERS = [
   { id: "Abdul_Basit_Murattal_192kbps",   label: "Abdul Basit (Murattal)" },
   { id: "Abdul_Basit_Mujawwad_128kbps",   label: "Abdul Basit (Mujawwad)" },
 ];
+
+const TRANSLATORS = [
+  { id: "Shamshad_Ali_Khan_46kbps", label: "Shamshad Ali Khan (Urdu)" },
+];
 const TOTAL_PAGES = 610;
 
 // ── Pure helpers (no closures, safe to call from event handlers) ──────────────
 const audioUrl = (reciter, surah, ayah) => {
   const file = `${String(surah).padStart(3,"0")}${String(ayah).padStart(3,"0")}`;
   return `/api/audio?r=${encodeURIComponent(reciter)}&f=${file}`;
+};
+
+const translationUrl = (translator, surah, ayah) => {
+  const file = `${String(surah).padStart(3,"0")}${String(ayah).padStart(3,"0")}`;
+  return `/api/translation?t=${encodeURIComponent(translator)}&f=${file}`;
 };
 
 const fullSurahUrl = (reciter, surah) => {
@@ -60,28 +69,36 @@ export default function MushafViewer() {
   const [contextMenu,   setContextMenu]   = useState(null); // { x, y, surah, ayah, displayAyah }
 
   // ── Audio state ───────────────────────────────────────────────────────────
-  const [playingAyah,  setPlayingAyah]  = useState(null); // { surah, ayah, displayAyah }
-  const [isPlaying,    setIsPlaying]    = useState(false);
-  const [autoAdvance,  setAutoAdvance]  = useState(true);
-  const [currentTime,  setCurrentTime]  = useState(0);
-  const [duration,     setDuration]     = useState(0);
+  const [playingAyah,    setPlayingAyah]    = useState(null); // { surah, ayah, displayAyah }
+  const [isPlaying,      setIsPlaying]      = useState(false);
+  const [autoAdvance,    setAutoAdvance]    = useState(true);
+  const [currentTime,    setCurrentTime]    = useState(0);
+  const [duration,       setDuration]       = useState(0);
+  const [translationMode, setTranslationMode] = useState(false);
+  const [translator,      setTranslator]      = useState(TRANSLATORS[0].id);
+  const [playPhase,       setPlayPhase]       = useState("quran"); // "quran" | "translation"
 
   // ── Refs (for use inside event handlers to avoid stale closures) ──────────
   const audioRef       = useRef(null); // main player
   const preloadRef     = useRef(null); // silent preload buffer
   const playingRef     = useRef(null); // mirrors playingAyah
   const autoAdvRef     = useRef(true); // mirrors autoAdvance
-  const playModeRef    = useRef("single"); // "single" | "continuous"
+  const playModeRef    = useRef("single"); // "single" | "continuous" | "bismillah" | "surah-full" | "translation"
   const reciterRef     = useRef(RECITERS[0].id); // mirrors reciter
   const pageRef        = useRef(1);    // mirrors page
   const ayahKeysRef    = useRef(new Set()); // ayah keys on current page
   const timestampsRef          = useRef(null); // loaded timestamps for full-surah highlighting
   const pendingAfterBismillah  = useRef(null); // { type:"ayah"|"surah", surah, ayah, dAyah, mode }
+  const translationModeRef     = useRef(false); // mirrors translationMode
+  const translatorRef          = useRef(TRANSLATORS[0].id); // mirrors translator
+  const savedPlayModeRef       = useRef("single"); // mode saved before switching to "translation"
 
   // ── Sync refs with state ──────────────────────────────────────────────────
-  useEffect(() => { reciterRef.current  = reciter;     }, [reciter]);
-  useEffect(() => { autoAdvRef.current  = autoAdvance; }, [autoAdvance]);
-  useEffect(() => { pageRef.current     = page;        }, [page]);
+  useEffect(() => { reciterRef.current         = reciter;         }, [reciter]);
+  useEffect(() => { autoAdvRef.current         = autoAdvance;     }, [autoAdvance]);
+  useEffect(() => { pageRef.current            = page;            }, [page]);
+  useEffect(() => { translationModeRef.current = translationMode; }, [translationMode]);
+  useEffect(() => { translatorRef.current      = translator;      }, [translator]);
 
   // ── Wake media pipeline when returning to tab after idle ──────────────────
   useEffect(() => {
@@ -164,8 +181,37 @@ export default function MushafViewer() {
         return;
       }
 
+      // ── Translation just finished → resume normal advance logic ──────────
+      let justFinishedTranslation = false;
+      if (mode === "translation") {
+        justFinishedTranslation = true;
+        const restored = savedPlayModeRef.current;
+        playModeRef.current = restored;
+        setPlayPhase("quran");
+        if (!cur || restored === "single" || !autoAdvRef.current) {
+          setIsPlaying(false);
+          return;
+        }
+        // fall through to continuous advance below
+      }
+
+      // ── Quran ayah just finished → play translation if mode enabled ───────
+      if (
+        !justFinishedTranslation &&
+        translationModeRef.current &&
+        cur && cur.ayah > 0
+      ) {
+        savedPlayModeRef.current = playModeRef.current;
+        playModeRef.current = "translation";
+        setPlayPhase("translation");
+        audio.src = translationUrl(translatorRef.current, cur.surah, cur.ayah);
+        audio.load();
+        audio.play().catch((e) => console.warn("[Audio]", e.message));
+        return;
+      }
+
       // ── Ayah mode ────────────────────────────────────────────────────────
-      if (!cur || mode === "single" || !autoAdvRef.current) {
+      if (!cur || playModeRef.current === "single" || !autoAdvRef.current) {
         setIsPlaying(false);
         return;
       }
@@ -278,6 +324,7 @@ export default function MushafViewer() {
     playModeRef.current = mode;
     setCurrentTime(0);
     setDuration(0);
+    setPlayPhase("quran");
 
     const audio = audioRef.current;
     audio.pause();
@@ -338,9 +385,20 @@ export default function MushafViewer() {
 
   // ── Reciter ───────────────────────────────────────────────────────────────
   const handleReciterChange = (id) => {
-    reciterRef.current = id; // update immediately for event handlers
+    reciterRef.current = id;
     setReciter(id);
     audioRef.current?.pause();
+  };
+
+  // ── Translation ───────────────────────────────────────────────────────────
+  const handleTranslationModeChange = (enabled) => {
+    translationModeRef.current = enabled;
+    setTranslationMode(enabled);
+  };
+
+  const handleTranslatorChange = (id) => {
+    translatorRef.current = id;
+    setTranslator(id);
   };
 
   // ── Ayah interactions ─────────────────────────────────────────────────────
@@ -441,12 +499,19 @@ export default function MushafViewer() {
         onReciterChange={handleReciterChange}
         onDebugToggle={() => setDebugMode((d) => !d)}
         onPlayFullSurah={playFullSurah}
+        // Translation
+        translationMode={translationMode}
+        translator={translator}
+        translators={TRANSLATORS}
+        onTranslationModeChange={handleTranslationModeChange}
+        onTranslatorChange={handleTranslatorChange}
         // Audio player props
         playingAyah={playingAyah}
         isPlaying={isPlaying}
         autoAdvance={autoAdvance}
         currentTime={currentTime}
         duration={duration}
+        playPhase={playPhase}
         onPlay={handlePlay}
         onPause={handlePause}
         onStop={handleStop}

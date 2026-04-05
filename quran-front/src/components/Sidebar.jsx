@@ -7,8 +7,11 @@ export default function Sidebar({
   page, totalPages, reciter, reciters, clickedAyah,
   debugMode, overlayStatus,
   onPageChange, onReciterChange, onDebugToggle, onPlayFullSurah,
+  // Translation
+  translationMode, translator, translators,
+  onTranslationModeChange, onTranslatorChange,
   // Audio player
-  playingAyah, isPlaying, autoAdvance, currentTime, duration,
+  playingAyah, isPlaying, autoAdvance, currentTime, duration, playPhase,
   onPlay, onPause, onStop, onNext, onPrev, onToggleAutoAdvance, onSeek,
 }) {
   const [pageInput, setPageInput] = useState(String(page));
@@ -169,6 +172,7 @@ export default function Sidebar({
             autoAdvance={autoAdvance}
             currentTime={currentTime}
             duration={duration}
+            playPhase={playPhase}
             onPlay={onPlay}
             onPause={onPause}
             onStop={onStop}
@@ -192,6 +196,30 @@ export default function Sidebar({
             <option key={r.id} value={r.id}>{r.label}</option>
           ))}
         </select>
+      </div>
+
+      {/* ── Translation Audio ── */}
+      <div className="sb-section">
+        <div className="sb-section-label">Translation Audio</div>
+        <label className="sb-translation-toggle">
+          <input
+            type="checkbox"
+            checked={translationMode}
+            onChange={(e) => onTranslationModeChange(e.target.checked)}
+          />
+          <span>Play translation after each Ayah</span>
+        </label>
+        {translationMode && (
+          <select
+            className="sb-select"
+            value={translator}
+            onChange={(e) => onTranslatorChange(e.target.value)}
+          >
+            {translators.map((t) => (
+              <option key={t.id} value={t.id}>{t.label}</option>
+            ))}
+          </select>
+        )}
       </div>
 
       {/* ── Footer / Debug ── */}
