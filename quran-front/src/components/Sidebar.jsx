@@ -8,8 +8,8 @@ export default function Sidebar({
   debugMode, overlayStatus,
   onPageChange, onReciterChange, onDebugToggle, onPlayFullSurah,
   // Translation
-  translationMode, translator, translators,
-  onTranslationModeChange, onTranslatorChange,
+  translationMode, translationOnlyMode, translator, translators,
+  onTranslationModeChange, onTranslationOnlyModeChange, onTranslatorChange,
   // Audio player
   playingAyah, isPlaying, autoAdvance, currentTime, duration, playPhase,
   onPlay, onPause, onStop, onNext, onPrev, onToggleAutoAdvance, onSeek,
@@ -173,6 +173,7 @@ export default function Sidebar({
             currentTime={currentTime}
             duration={duration}
             playPhase={playPhase}
+            translationOnlyMode={translationOnlyMode}
             onPlay={onPlay}
             onPause={onPause}
             onStop={onStop}
@@ -201,15 +202,36 @@ export default function Sidebar({
       {/* ── Translation Audio ── */}
       <div className="sb-section">
         <div className="sb-section-label">Translation Audio</div>
-        <label className="sb-translation-toggle">
-          <input
-            type="checkbox"
-            checked={translationMode}
-            onChange={(e) => onTranslationModeChange(e.target.checked)}
-          />
-          <span>Play translation after each Ayah</span>
-        </label>
-        {translationMode && (
+        <div className="sb-translation-options">
+          <label className="sb-radio-label">
+            <input
+              type="radio"
+              name="translationAudioMode"
+              checked={!translationMode && !translationOnlyMode}
+              onChange={() => { onTranslationModeChange(false); onTranslationOnlyModeChange(false); }}
+            />
+            <span>Off</span>
+          </label>
+          <label className="sb-radio-label">
+            <input
+              type="radio"
+              name="translationAudioMode"
+              checked={translationMode}
+              onChange={() => onTranslationModeChange(true)}
+            />
+            <span>After each Ayah</span>
+          </label>
+          <label className="sb-radio-label">
+            <input
+              type="radio"
+              name="translationAudioMode"
+              checked={translationOnlyMode}
+              onChange={() => onTranslationOnlyModeChange(true)}
+            />
+            <span>Translation Only</span>
+          </label>
+        </div>
+        {(translationMode || translationOnlyMode) && (
           <select
             className="sb-select"
             value={translator}

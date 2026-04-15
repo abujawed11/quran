@@ -15,6 +15,7 @@ export default function AudioPlayer({
   currentTime,
   duration,
   playPhase,
+  translationOnlyMode,
   onPlay,
   onPause,
   onStop,
@@ -37,7 +38,13 @@ export default function AudioPlayer({
       {/* Now playing info */}
       <div className="ap-now-playing">
         <span className={`ap-label${isTranslation ? " ap-label--translation" : ""}`}>
-          {isFullMode ? "Now Playing · Full Surah" : isTranslation ? "Translation" : "Now Playing"}
+          {isFullMode
+            ? "Now Playing · Full Surah"
+            : translationOnlyMode
+            ? "Translation Only"
+            : isTranslation
+            ? "Translation"
+            : "Now Playing"}
         </span>
         <span className="ap-title">{title}</span>
       </div>
